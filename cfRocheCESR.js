@@ -3719,7 +3719,7 @@ function cfpParameterViolation(payLoad) {
   var stationNumber = payLoadData.stationNumber;
   var violationMessage = payLoadData.violationMessage;
 
-  return generateReturn(0, "", violationMessage);
+  return generateReturn(0, "", [violationMessage]);
 }
 
 /**
