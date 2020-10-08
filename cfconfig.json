@@ -1,0 +1,15 @@
+{
+    "clusterNode": "http://localhost:8080/mes",
+    "sessionId": 3768194748206326,
+    "scriptName": "RocheCESR",
+    "scriptFile": "cfRocheCESR.js",
+    "defaultStation": "01010010",
+    "userId": "admin",
+    "userPw": "admin",
+    "client": "01",
+    "sysIdentifier": "VSC Test",
+    "majorVersion": 1,
+    "minorVersion": -1,
+    "upload": true,
+    "test": true
+}

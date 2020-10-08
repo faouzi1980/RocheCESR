@@ -1,0 +1,18 @@
+{
+    "project": "project name",
+    "description": "",
+  
+    "default": {
+        "scenario": "3.1.0",
+        "name": "Setup Check - Setup OK - The setup is activated for the right part number in iTAC.",
+        "method": "cffcCheckUser",
+        "args": [
+            "01010010",
+            "",
+            "admin",
+            "admin",
+            1
+        ]
+    },
+    "scenarios": []
+}
