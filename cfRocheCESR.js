@@ -3715,10 +3715,8 @@ function cfpParameterViolation(payLoad) {
   if (!payLoadData.stationNumber || !payLoadData.violationMessage) {
     return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
   }
-
   var stationNumber = payLoadData.stationNumber;
   var violationMessage = payLoadData.violationMessage;
-
   return generateReturn(0, "", [violationMessage]);
 }
 
