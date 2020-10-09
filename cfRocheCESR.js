@@ -56,14 +56,16 @@ Change index:
     Sami Akkari             2020-09-07      Roche CESR      cffcMachineOut              Add KLS cycle time calculation from load/unload chamber 
     Radhoine Jmal           2020-09-07      Roche CESR      cffcWayDecision             - Add direction of plate and type of side 
     Abderraouf Bouyahi      2020-09-18      Roche CESR      cffcHandleIST               Add cffcHandleIST         
-    Radhoine Jmal           2020-09-24      Roche CESR      cffcMachineIn             - Add Get attribute for topic and type of plate 
-    Radhoine Jmal           2020-09-28      Roche CESR      cffcSetupConformation     - Add ConfigGetValues API and configUpdateValues 
-                                                                                        to change the state of stataion(Not available)
-                                                            cffcMachineOut            - Add ConfigGetValues API and configUpdateValues 
-                                                                                        to change the state of stataion(Available)
-	Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision           - Add ConfigGetValues API to identify plate direction     
-    Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode        - Add Config flag for individual function (prod / test:dummy)   
-    Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation     - Update cfpParameterViolation(payLoad) using payLoad
+    Radhoine Jmal           2020-09-24      Roche CESR      cffcMachineIn               - Add Get attribute for topic and type of plate 
+    Radhoine Jmal           2020-09-28      Roche CESR      cffcSetupConformation       - Add ConfigGetValues API and configUpdateValues 
+                                                                                          to change the state of stataion(Not available)
+                                                            cffcMachineOut              - Add ConfigGetValues API and configUpdateValues 
+                                                                                          to change the state of stataion(Available)
+	  Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
+    Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode          - Add Config flag for individual function (prod / test:dummy)   
+    Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation       - Update cfpParameterViolation(payLoad) using payLoad
+    Radhoine Jmal           2020-09-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
+    Radhoine Jmal           2020-09-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad (Add create materialBinNumber)
 */
 
 /* eslint-disable no-undef*/
@@ -101,6 +103,7 @@ var prod_cffcMachineIn = true;
 var prod_cffcMachineOut = true;
 var prod_cffcPing = true;
 var prod_cffcProcessMagazine = true;
+var prod_cffcRequestCalibrationData = true;
 var prod_cffcRequestSpecialPlate = true;
 var prod_cffcSetupConfirmation = true;
 var prod_cffcStorageLoad = true;
@@ -737,7 +740,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
       var stationSettingResultKeys = ["WORKORDER_NUMBER", "PROCESS_LAYER", "PART_NUMBER"];
       var result_trGetStationSetting = imsApiService.trGetStationSetting(
         imsApiSessionContext,
-        "10010030010", // --> String
+        stationNumber, // --> String
         stationSettingResultKeys // --> String[]
       );
       var return_value = result_trGetStationSetting.return_value;
@@ -751,7 +754,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
 
       //--------------------------------attribGetAttributeValues---------------------------------
       var objectType = 7;
-      var objectNumber = "10010030010";
+      var objectNumber = stationNumber;
       var objectDetail = "-1";
       var attributeCodeArray = ["PMU_MEAS"];
       var allMergeLevel = 1;
@@ -782,7 +785,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
           measureValues.push("0", "0", "" + mv[i], "" + mv[i + 1]);
         }
 
-        var stationNumber = "10010030010";
+        var stationNumber = stationNumber;
         var processLayer = processLayer;
         var recipeVersionId = "-1";
         var serialNumberRef = serialNumberRef;
@@ -840,7 +843,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
     ]);
   }
 
-  return generateReturn(0, "");
+  return generateReturn(0, "", [serialNumbersOut, amount]);
 }
 
 /**
@@ -1756,326 +1759,408 @@ function cffcLogoutMagazines(stationNumber, magazineNumber, position) {
 }
 
 /**
+ * Custom function cffcRequestCalibrationData
+ * @param {string} inputArg1 - stationNumber
+ * @param {string} inputArg2 - sensor
+ *
+ * @returns {Result_customFunctionCommon}
+ */
+function cffcRequestCalibrationData(stationNumber, sensor) {
+  if (prod_cffcRequestCalibrationData) {
+    if (!stationNumber || !sensor) {
+      return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
+    }
+    var rh_ref = 40;
+    var rh_cur = 33.6;
+    var temp_ref = 39;
+    var temp_cur = 37;
+    var results = [rh_ref, rh_cur, temp_ref, temp_cur];
+    return generateReturn(0, "", results);
+  } else {
+    return generateReturn(0, "", [40, 33.6, 39, 37]);
+  }
+}
+
+/**
  * @param {string} inputArg1 - stationNumber
  * @param {string} inputArg2 - serialNumber
  * @returns {Result_customFunctionCommon}
  */
 function cffcMachineIn(stationNumber, serialNumber) {
   if (prod_cffcMachineIn) {
-    // if (!serialNumber || !stationNumber) {
-    // 	// eslint-disable-next-line no-magic-numbers
-    // 	return generateReturn(-1001, 'Ungültige Inputparameter');
-    // }
-    // var result_trGetStationSetting = imsApiService.trGetStationSetting(imsApiSessionContext, stationNumber, [
-    // 	ImsApiKey.WORKORDER_NUMBER,
-    // 	ImsApiKey.PART_NUMBER,
-    // 	ImsApiKey.PROCESS_LAYER,
-    // 	ImsApiKey.WORKSTEP_NUMBER,
-    // ]);
-    // if (result_trGetStationSetting.return_value != 0) {
-    // 	return generateError(result_trGetStationSetting.return_value, 'trGetStationSetting');
-    // }
-    // var workOrderNumber = result_trGetStationSetting.stationSettingResultValues[0];
-    // var articleNumber = result_trGetStationSetting.stationSettingResultValues[1];
-    // var processLayer = Number(result_trGetStationSetting.stationSettingResultValues[2]);
-    // var processName = result_trGetStationSetting.stationSettingResultValues[3];
-    // var result_trCheckSerialNumberState = imsApiService.trCheckSerialNumberState(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	processLayer,
-    // 	2,
-    // 	serialNumber,
-    // 	'-1',
-    // 	[ImsApiKey.BOOKING_VALID, ImsApiKey.ERROR_CODE, ImsApiKey.IN_PROCESS]
-    // );
-    // if (result_trCheckSerialNumberState.return_value == 240) {
-    // 	return generateReturn(1, 'ErrorMessage:forward plate without processing');
-    // }
-    // if (result_trCheckSerialNumberState.return_value != 0) {
-    // 	return generateError(result_trCheckSerialNumberState.return_value, 'trCheckSerialNumberState');
-    // }
-    // var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	serialNumber,
-    // 	'-1',
-    // 	[ImsApiKey.WORKORDER_NUMBER]
-    // );
-    // if (result_trGetSerialNumberInfo.return_value !== 0) {
-    // 	return generateError(result_mlUpdateStorage.return_value, 'result_trGetSerialNumberInfo');
-    // }
-    // var workorderNumber = String(result_trGetSerialNumberInfo.serialNumberResultValues[0]);
-    // var res = workorderNumber.split('_');
-    // if (res[1] == 'Vordruck') {
-    // 	specialState = 1;
-    // } else {
-    // 	specialState = 0;
-    // }
-    // var result_trUploadState = imsApiService.trUploadState(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	processLayer,
-    // 	serialNumber,
-    // 	'-1',
-    // 	3,
-    // 	1,
-    // 	-1,
-    // 	0,
-    // 	[ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
-    // 	[0, serialNumber, 3]
-    // );
-    // if (result_trUploadState.return_value !== 0) {
-    // 	return generateError(result_trUploadState.return_value, 'trUploadState');
-    // }
-    // var result_setupCheck = imsApiService.setupCheck(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	serialNumber,
-    // 	'-1',
-    // 	'-1',
-    // 	processLayer,
-    // 	1,
-    // 	0
-    // );
-    // if (result_setupCheck.return_value != 0) {
-    // 	return generateReturn(-1, 'ErrorMessage: “Setup is not valid”');
-    // }
-    // var result_equCheckEquipmentData = imsApiService.equCheckEquipmentData(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	'-1',
-    // 	'-1',
-    // 	'-1',
-    // 	processLayer,
-    // 	1,
-    // 	[ImsApiKey.EQUIPMENT_NUMBER, ImsApiKey.EQUIPMENT_STATE, ImsApiKey.EQUIPMENT_CHECKSTATE]
-    // );
-    // if (result_equCheckEquipmentData.return_value == -2) {
-    // 	return generateReturn(-2, 'ErrorMessage: “Setup equipement is not valid”');
-    // }
-    // if (result_equCheckEquipmentData.return_value == 3) {
-    // 	return generateReturn(3, 'Warning:equipment usage limit reached');
-    // }
-    // if (result_equCheckEquipmentData.return_value != 0) {
-    // 	return generateError(result_equCheckEquipmentData.return_value, 'equCheckEquipmentData');
-    // }
-    // var result_mdaGetRecipeData = imsApiService.mdaGetRecipeData(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	'-1',
-    // 	-1,
-    // 	'-1',
-    // 	'PROGRAM_NAME',
-    // 	-1.0,
-    // 	'-1',
-    // 	'T',
-    // 	1,
-    // 	[new KeyValue('PART_NUMBER', articleNumber)],
-    // 	['NOMINAL']
-    // );
-    // if (result_mdaGetRecipeData.return_value != 0) {
-    // 	return generateReturn(1, 'ErrorMessage:“invalid recipe data”');
-    // }
-    // var programName = result_mdaGetRecipeData.recipeResultValues[0];
-    // //-------------------attribGetAttributeValues--------------
-    // var objectType = 0;
-    // var objectNumber = serialNumber;
-    // var objectDetail = -1;
-    // var attributeCodeArray = ['TYP'];
-    // var allMergeLevel = 1;
-    // var attributeResultKeys = ['ATTRIBUTE_CODE', 'ATTRIBUTE_VALUE'];
-    // var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-    // 	imsApiSessionContext,
-    // 	stationNumber, // String
-    // 	objectType, // int
-    // 	objectNumber, // String
-    // 	objectDetail, // String
-    // 	attributeCodeArray, // String[]
-    // 	allMergeLevel, // int
-    // 	attributeResultKeys // String[]
-    // );
-    // var return_value = result_attribGetAttributeValues.return_value;
-    // if (return_value != 0) {
-    // 	return generateError(return_value, 'Fehler in MES API attribGetAttributeValues');
-    // }
-    // var plateType = result_attribGetAttributeValues.attributeResultValues[1];
-    // var result_mdataGetWorkplanData = imsApiService.mdataGetWorkplanData(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	[new KeyValue('SERIAL_NUMBER', serialNumber), new KeyValue('WORKORDER_NUMBER', workOrderNumber)],
-    // 	['CYCLE_TIME_MACHINE']
-    // );
-    // if (result_mdataGetWorkplanData.return_value != 0) {
-    // 	return generateError(result_mdataGetWorkplanData.return_value, 'mdataGetWorkplanData');
-    // }
-    // var cycleTime = result_mdataGetWorkplanData.workplanDataResultValues[0];
-    // var result_trGetSerialNumberForWorkOrderAndWorkstep = imsApiService.trGetSerialNumberForWorkOrderAndWorkstep(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	processLayer,
-    // 	workOrderNumber,
-    // 	0,
-    // 	0,
-    // 	0,
-    // 	0,
-    // 	100,
-    // 	1,
-    // 	0,
-    // 	['BOOK_DATE', 'SERIAL_NUMBER', 'SERIAL_NUMBER_STATE']
-    // );
-    // if (result_trGetSerialNumberForWorkOrderAndWorkstep.return_value != 0) {
-    // 	return generateError(
-    // 		result_trGetSerialNumberForWorkOrderAndWorkstep.return_value,
-    // 		'trGetSerialNumberForWorkOrderAndWorkstep'
-    // 	);
-    // }
-    // var firstPlate = result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues[0];
-    // firstPlate = Math.round(firstPlate / 1000);
-    // var actualPlate = firstPlate;
-    // var lastPlate = Math.round(
-    // 	(cycleTime * (result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues.length / 3)) / 1000
-    // );
-    // var result_shipGetLotFromSerialNumber = imsApiService.shipGetLotFromSerialNumber(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	serialNumber,
-    // 	'-1',
-    // 	['SHIPPING_LOT_NUMBER']
-    // );
-    // if (result_shipGetLotFromSerialNumber.return_value != 0) {
-    // 	return generateError(result_shipGetLotFromSerialNumber.return_value, 'shipGetLotFromSerialNumber');
-    // }
-    // var magazineNumber = result_shipGetLotFromSerialNumber.lotResultValues[0];
-    // var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	7,
-    // 	stationNumber,
-    // 	'-1',
-    // 	['LAGERORTE'],
-    // 	0,
-    // 	['ATTRIBUTE_CODE', 'ATTRIBUTE_VALUE', 'ERROR_CODE']
-    // );
-    // var errorCode = result_attribGetAttributeValues.return_value;
-    // if (errorCode == 5) {
-    // 	errorCode = result_attribGetAttributeValues.attributeResultValues[2] /* ERROR_CODE */;
-    // }
-    // if (errorCode != 0) {
-    // 	return generateError(errorCode, 'attribGetAttributeValues');
-    // }
-    // attribValue = result_attribGetAttributeValues.attributeResultValues[1];
-    // /*
-    // var result_mlGetStorageData = imsApiService.mlGetStorageData(
-    //     imsApiSessionContext,
-    //     stationNumber,
-    //     [
-    //         new KeyValue("MAX_ROWS", 100),
-    //         new KeyValue("STORAGE_CELL_STATE", "F"),
-    //         new KeyValue("STORAGE_NUMBER", attribValue)
-    //     ],
-    //     [],
-    //     [],
-    //     ["STORAGE_NUMBER"],
-    //     []
-    // );
-    // if (result_mlGetStorageData.return_value != 0) {
-    //     return generateError(result_mlGetStorageData.return_value, "mlGetStorageData");
-    // }
-    // */
-    // var slotID = attribValue;
-    // var result_trGetProductQuantity = imsApiService.trGetProductQuantity(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	processLayer,
-    // 	0,
-    // 	[],
-    // 	[new KeyValue('WORKORDER_NUMBER', workOrderNumber)],
-    // 	['QUANTITY_WORKORDER_TOTAL', 'QUANTITY_FAIL', 'QUANTITY_PASS', 'QUANTITY_SCRAP']
-    // );
-    // if (result_trGetProductQuantity.return_value != 0) {
-    // 	return generateError(result_trGetProductQuantity.return_value, 'trGetProductQuantity');
-    // }
-    // var total = Number(result_trGetProductQuantity.productQuantityResultValues[0]);
-    // var pass = Number(result_trGetProductQuantity.productQuantityResultValues[2]);
-    // var fail = Number(result_trGetProductQuantity.productQuantityResultValues[1]);
-    // var scrapp = Number(result_trGetProductQuantity.productQuantityResultValues[3]);
-    // var processedPlates = pass + fail + scrapp;
-    // var remainingPlates = total - processedPlates;
-    // //--------------------------mdaGetRecipeData-----------------
-    // var result_mdaGetRecipeData = imsApiService.mdaGetRecipeData(
-    // 	imsApiSessionContext,
-    // 	stationNumber,
-    // 	'-1',
-    // 	-1,
-    // 	'-1',
-    // 	'VERSION',
-    // 	-1.0,
-    // 	'-1',
-    // 	'U',
-    // 	1,
-    // 	[new KeyValue('PART_NUMBER', articleNumber), new KeyValue('STATION_NUMBER', stationNumber)],
-    // 	['NOMINAL']
-    // );
-    // if (
-    // 	result_mdaGetRecipeData.return_value != 0 &&
-    // 	result_mdaGetRecipeData.return_value != -701 &&
-    // 	result_mdaGetRecipeData.return_value != -706
-    // ) {
-    // 	return generateReturn(1, 'ErrorMessage:“invalid recipe data”');
-    // }
-    // var version = result_mdaGetRecipeData.recipeResultValues[0];
-    // if (result_mdaGetRecipeData.return_value == -701 || result_mdaGetRecipeData.return_value == -706) {
-    // 	var version = '';
-    // }
-    // var payLoad =
-    // 	'{"stationNumber" : " ' +
-    // 	stationNumber +
-    // 	' ","serialNumber" : "' +
-    // 	serialNumber +
-    // 	'", "processName" : " ' +
-    // 	processName +
-    // 	' ", "version" : " ' +
-    // 	version +
-    // 	' ", "workOrderNumber" : " ' +
-    // 	workOrderNumber +
-    // 	' ", "articleNumber" : " ' +
-    // 	articleNumber +
-    // 	' ", "specialState" : " ' +
-    // 	specialState +
-    // 	' "}';
-    // //-------------------attribGetAttributeValues--------------
-    // var objectType = 7;
-    // var objectNumber = stationNumber;
-    // var objectDetail = -1;
-    // var attributeCodeArray = ['TOPIC'];
-    // var allMergeLevel = 1;
-    // var attributeResultKeys = ['ATTRIBUTE_CODE', 'ATTRIBUTE_VALUE'];
-    // var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-    // 	imsApiSessionContext,
-    // 	stationNumber, // String
-    // 	objectType, // int
-    // 	objectNumber, // String
-    // 	objectDetail, // String
-    // 	attributeCodeArray, // String[]
-    // 	allMergeLevel, // int
-    // 	attributeResultKeys // String[]
-    // );
-    // var return_value = result_attribGetAttributeValues.return_value;
-    // if (return_value != 0) {
-    // 	return generateError(return_value, 'Fehler in MES API attribGetAttributeValues');
-    // }
-    //var topic = '';
-    //var message = '';
-    //var result_msgPublish = imsApiService.msgPublish(
-    //	imsApiSessionContext,
-    //	topic, // String
-    //	message // String
-    //);
-    //var return_value = result_msgPublish.return_value;
-    //if (return_value != 0) {
-    //	return generateReturn(-1002, 'Fehler in MES API msgPublish');
-    //}
-    //var msgId = result_msgPublish.msgId;
+    if (!serialNumber || !stationNumber) {
+      // eslint-disable-next-line no-magic-numbers
+      return generateReturn(-1001, "Ungültige Inputparameter");
+    }
+
+    var result_trGetStationSetting = imsApiService.trGetStationSetting(imsApiSessionContext, stationNumber, [
+      ImsApiKey.WORKORDER_NUMBER,
+      ImsApiKey.PART_NUMBER,
+      ImsApiKey.PROCESS_LAYER,
+      ImsApiKey.WORKSTEP_NUMBER,
+    ]);
+
+    if (result_trGetStationSetting.return_value != 0) {
+      return generateError(result_trGetStationSetting.return_value, "trGetStationSetting");
+    }
+
+    var workOrderNumber = result_trGetStationSetting.stationSettingResultValues[0];
+    var articleNumber = result_trGetStationSetting.stationSettingResultValues[1];
+    var processLayer = Number(result_trGetStationSetting.stationSettingResultValues[2]);
+    var processName = result_trGetStationSetting.stationSettingResultValues[3];
+
+    var result_trCheckSerialNumberState = imsApiService.trCheckSerialNumberState(
+      imsApiSessionContext,
+      stationNumber,
+      processLayer,
+      2,
+      serialNumber,
+      "-1",
+      [ImsApiKey.BOOKING_VALID, ImsApiKey.ERROR_CODE, ImsApiKey.IN_PROCESS]
+    );
+
+    if (result_trCheckSerialNumberState.return_value == 240) {
+      return generateReturn(1, "ErrorMessage:forward plate without processing");
+    }
+
+    if (result_trCheckSerialNumberState.return_value != 0) {
+      return generateError(result_trCheckSerialNumberState.return_value, "trCheckSerialNumberState");
+    }
+
+    var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
+      imsApiSessionContext,
+      stationNumber,
+      serialNumber,
+      "-1",
+      [ImsApiKey.WORKORDER_NUMBER]
+    );
+
+    if (result_trGetSerialNumberInfo.return_value !== 0) {
+      return generateError(result_mlUpdateStorage.return_value, "result_trGetSerialNumberInfo");
+    }
+    var workorderNumber = String(result_trGetSerialNumberInfo.serialNumberResultValues[0]);
+    var res = workorderNumber.split("_");
+    if (res[1] == "Vordruck") {
+      specialState = 1;
+    } else {
+      specialState = 0;
+    }
+
+    var result_trUploadState = imsApiService.trUploadState(
+      imsApiSessionContext,
+      stationNumber,
+      processLayer,
+      serialNumber,
+      "-1",
+      3,
+      1,
+      -1,
+      0,
+      [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
+      [0, serialNumber, 3]
+    );
+
+    if (result_trUploadState.return_value !== 0) {
+      return generateError(result_trUploadState.return_value, "trUploadState");
+    }
+
+    var result_setupCheck = imsApiService.setupCheck(
+      imsApiSessionContext,
+      stationNumber,
+      serialNumber,
+      "-1",
+      "-1",
+      processLayer,
+      1,
+      0
+    );
+
+    if (result_setupCheck.return_value != 0) {
+      return generateReturn(-1, "ErrorMessage: “Setup is not valid”");
+    }
+
+    var result_equCheckEquipmentData = imsApiService.equCheckEquipmentData(
+      imsApiSessionContext,
+      stationNumber,
+      "-1",
+      "-1",
+      "-1",
+      processLayer,
+      1,
+      [ImsApiKey.EQUIPMENT_NUMBER, ImsApiKey.EQUIPMENT_STATE, ImsApiKey.EQUIPMENT_CHECKSTATE]
+    );
+
+    if (result_equCheckEquipmentData.return_value == -2) {
+      return generateReturn(-2, "ErrorMessage: “Setup equipement is not valid”");
+    }
+
+    if (result_equCheckEquipmentData.return_value == 3) {
+      return generateReturn(3, "Warning:equipment usage limit reached");
+    }
+
+    if (result_equCheckEquipmentData.return_value != 0) {
+      return generateError(result_equCheckEquipmentData.return_value, "equCheckEquipmentData");
+    }
+
+    var result_mdaGetRecipeData = imsApiService.mdaGetRecipeData(
+      imsApiSessionContext,
+      stationNumber,
+      "-1",
+      -1,
+      "-1",
+      "PROGRAM_NAME",
+      -1.0,
+      "-1",
+      "T",
+      1,
+      [new KeyValue("PART_NUMBER", articleNumber)],
+      ["NOMINAL"]
+    );
+
+    if (result_mdaGetRecipeData.return_value != 0) {
+      return generateReturn(1, "ErrorMessage:“invalid recipe data”");
+    }
+
+    var programName = result_mdaGetRecipeData.recipeResultValues[0];
+
+    //-------------------attribGetAttributeValues--------------
+    var objectType = 0;
+    var objectNumber = serialNumber;
+    var objectDetail = -1;
+    var attributeCodeArray = ["TYP"];
+    var allMergeLevel = 1;
+    var attributeResultKeys = ["ATTRIBUTE_CODE", "ATTRIBUTE_VALUE"];
+    var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+      imsApiSessionContext,
+      stationNumber, // String
+      objectType, // int
+      objectNumber, // String
+      objectDetail, // String
+      attributeCodeArray, // String[]
+      allMergeLevel, // int
+      attributeResultKeys // String[]
+    );
+    var return_value = result_attribGetAttributeValues.return_value;
+    if (return_value != 0) {
+      return generateError(return_value, "Fehler in MES API attribGetAttributeValues");
+    }
+    var plateType = result_attribGetAttributeValues.attributeResultValues[1];
+
+    var result_mdataGetWorkplanData = imsApiService.mdataGetWorkplanData(
+      imsApiSessionContext,
+      stationNumber,
+      [new KeyValue("SERIAL_NUMBER", serialNumber), new KeyValue("WORKORDER_NUMBER", workOrderNumber)],
+      ["CYCLE_TIME_MACHINE"]
+    );
+
+    if (result_mdataGetWorkplanData.return_value != 0) {
+      return generateError(result_mdataGetWorkplanData.return_value, "mdataGetWorkplanData");
+    }
+
+    var cycleTime = result_mdataGetWorkplanData.workplanDataResultValues[0];
+
+    var result_trGetSerialNumberForWorkOrderAndWorkstep = imsApiService.trGetSerialNumberForWorkOrderAndWorkstep(
+      imsApiSessionContext,
+      stationNumber,
+      processLayer,
+      workOrderNumber,
+      0,
+      0,
+      0,
+      0,
+      100,
+      1,
+      0,
+      ["BOOK_DATE", "SERIAL_NUMBER", "SERIAL_NUMBER_STATE"]
+    );
+
+    if (result_trGetSerialNumberForWorkOrderAndWorkstep.return_value != 0) {
+      return generateError(
+        result_trGetSerialNumberForWorkOrderAndWorkstep.return_value,
+        "trGetSerialNumberForWorkOrderAndWorkstep"
+      );
+    }
+
+    var firstPlate = result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues[0];
+    firstPlate = Math.round(firstPlate / 1000);
+    var actualPlate = firstPlate;
+
+    var lastPlate = Math.round(
+      (cycleTime * (result_trGetSerialNumberForWorkOrderAndWorkstep.serialNumberResultValues.length / 3)) / 1000
+    );
+
+    var result_shipGetLotFromSerialNumber = imsApiService.shipGetLotFromSerialNumber(
+      imsApiSessionContext,
+      stationNumber,
+      serialNumber,
+      "-1",
+      ["SHIPPING_LOT_NUMBER"]
+    );
+
+    if (result_shipGetLotFromSerialNumber.return_value != 0) {
+      return generateError(result_shipGetLotFromSerialNumber.return_value, "shipGetLotFromSerialNumber");
+    }
+
+    var magazineNumber = result_shipGetLotFromSerialNumber.lotResultValues[0];
+
+    var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+      imsApiSessionContext,
+      stationNumber,
+      7,
+      stationNumber,
+      "-1",
+      ["LAGERORTE"],
+      0,
+      ["ATTRIBUTE_CODE", "ATTRIBUTE_VALUE", "ERROR_CODE"]
+    );
+
+    var errorCode = result_attribGetAttributeValues.return_value;
+
+    if (errorCode == 5) {
+      errorCode = result_attribGetAttributeValues.attributeResultValues[2] /* ERROR_CODE */;
+    }
+
+    if (errorCode != 0) {
+      return generateError(errorCode, "attribGetAttributeValues");
+    }
+
+    attribValue = result_attribGetAttributeValues.attributeResultValues[1];
+    /*
+      var result_mlGetStorageData = imsApiService.mlGetStorageData(
+          imsApiSessionContext,
+          stationNumber,
+          [
+              new KeyValue("MAX_ROWS", 100),
+              new KeyValue("STORAGE_CELL_STATE", "F"),
+              new KeyValue("STORAGE_NUMBER", attribValue)
+          ],
+          [],
+          [],
+          ["STORAGE_NUMBER"],
+          []
+      );
+
+      if (result_mlGetStorageData.return_value != 0) {
+          return generateError(result_mlGetStorageData.return_value, "mlGetStorageData");
+      }
+      */
+    var slotID = attribValue;
+
+    var result_trGetProductQuantity = imsApiService.trGetProductQuantity(
+      imsApiSessionContext,
+      stationNumber,
+      processLayer,
+      0,
+      [],
+      [new KeyValue("WORKORDER_NUMBER", workOrderNumber)],
+      ["QUANTITY_WORKORDER_TOTAL", "QUANTITY_FAIL", "QUANTITY_PASS", "QUANTITY_SCRAP"]
+    );
+
+    if (result_trGetProductQuantity.return_value != 0) {
+      return generateError(result_trGetProductQuantity.return_value, "trGetProductQuantity");
+    }
+
+    var total = Number(result_trGetProductQuantity.productQuantityResultValues[0]);
+    var pass = Number(result_trGetProductQuantity.productQuantityResultValues[2]);
+    var fail = Number(result_trGetProductQuantity.productQuantityResultValues[1]);
+    var scrapp = Number(result_trGetProductQuantity.productQuantityResultValues[3]);
+
+    var processedPlates = pass + fail + scrapp;
+    var remainingPlates = total - processedPlates;
+    //--------------------------mdaGetRecipeData-----------------
+    var result_mdaGetRecipeData = imsApiService.mdaGetRecipeData(
+      imsApiSessionContext,
+      stationNumber,
+      "-1",
+      -1,
+      "-1",
+      "VERSION",
+      -1.0,
+      "-1",
+      "U",
+      1,
+      [new KeyValue("PART_NUMBER", articleNumber), new KeyValue("STATION_NUMBER", stationNumber)],
+      ["NOMINAL"]
+    );
+
+    if (
+      result_mdaGetRecipeData.return_value != 0 &&
+      result_mdaGetRecipeData.return_value != -701 &&
+      result_mdaGetRecipeData.return_value != -706
+    ) {
+      return generateReturn(1, "ErrorMessage:“invalid recipe data”");
+    }
+
+    var version = result_mdaGetRecipeData.recipeResultValues[0];
+    if (result_mdaGetRecipeData.return_value == -701 || result_mdaGetRecipeData.return_value == -706) {
+      var version = "";
+    }
+    if (isAllowedStation(stationNumber, "STATION_TYPE", "CAMERA")) {
+      var payLoad =
+        '{"stationNumber" : " ' +
+        stationNumber +
+        ' ","serialNumber" : "' +
+        serialNumber +
+        '", "processName" : " ' +
+        processName +
+        ' ", "version" : " ' +
+        version +
+        ' ", "workOrderNumber" : " ' +
+        workOrderNumber +
+        ' ", "articleNumber" : " ' +
+        articleNumber +
+        ' ", "specialState" : " ' +
+        specialState +
+        ' "}';
+
+      //-------------------attribGetAttributeValues--------------
+      var objectType = 7;
+      var objectNumber = stationNumber;
+      var objectDetail = -1;
+      var attributeCodeArray = ["TOPIC"];
+      var allMergeLevel = 1;
+      var attributeResultKeys = ["ATTRIBUTE_CODE", "ATTRIBUTE_VALUE"];
+      var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+        imsApiSessionContext,
+        stationNumber, // String
+        objectType, // int
+        objectNumber, // String
+        objectDetail, // String
+        attributeCodeArray, // String[]
+        allMergeLevel, // int
+        attributeResultKeys // String[]
+      );
+      var return_value = result_attribGetAttributeValues.return_value;
+      if (return_value != 0) {
+        return generateError(return_value, "Fehler in MES API attribGetAttributeValues");
+      }
+      var topic = result_attribGetAttributeValues.attributeResultValues[1];
+      var message = payLoad;
+      var result_msgPublish = imsApiService.msgPublish(
+        imsApiSessionContext,
+        topic, // String
+        message // String
+      );
+      var return_value = result_msgPublish.return_value;
+      if (return_value != 0) {
+        return generateReturn(-1002, "Fehler in MES API msgPublish");
+      }
+      var msgId = result_msgPublish.msgId;
+
+      return generateReturn(0, "", [articleNumber, workOrderNumber, processedPlates, remainingPlates]);
+    }
+    return generateReturn(0, "", [
+      articleNumber,
+      workOrderNumber,
+      programName,
+      firstPlate,
+      actualPlate,
+      lastPlate,
+      slotID,
+      processedPlates,
+      remainingPlates,
+      plateType,
+    ]);
   } else {
     return generateReturn(0, "", ["55", "500", "RocheTest", "1_2", "1_3", "1_4", "1_1", 10, 20, 0]);
   }
@@ -2837,7 +2922,28 @@ function cffcStorageLoad(stationNumber, magazineNumber) {
       // eslint-disable-next-line no-magic-numbers
       return generateReturn(-1001, "Ungültige Inputparameter");
     }
+    //--------------------------mlCreateNewMaterialBin---------------------------
+    //! This API (mlCreateNewMaterialBin) must be removed later, it is used now for testing only
+    var materialBinUploadKeys = [
+      "ERROR_CODE",
+      "MATERIAL_BIN_NUMBER",
+      "MATERIAL_BIN_PART_NUMBER",
+      "MATERIAL_BIN_QTY_ACTUAL",
+    ];
+    var materialBinUploadValues = [0, magazineNumber, "PartForTest", 1000];
 
+    var result_mlCreateNewMaterialBin = imsApiService.mlCreateNewMaterialBin(
+      imsApiSessionContext,
+      stationNumber, // String
+      materialBinUploadKeys, // String[]
+      materialBinUploadValues // String[]
+    );
+    var return_value = result_mlCreateNewMaterialBin.return_value;
+    if (return_value != 0) {
+      return generateError(result_mlCreateNewMaterialBin.return_value, "mlCreateNewMaterialBin");
+    }
+
+    //------------------------------------------------------------
     var lotNumber = magazineNumber;
     var serialNumberResultKeys = [ImsApiKey.SERIAL_NUMBER];
     var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
