@@ -64,8 +64,8 @@ Change index:
 	  Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode          - Add Config flag for individual function (prod / test:dummy)   
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation       - Update cfpParameterViolation(payLoad) using payLoad
-    Radhoine Jmal           2020-10-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
-    Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad (Add create materialBinNumber)
+    Radhoine Jmal           2020-09-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
+    Radhoine Jmal           2020-09-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
 */
 
 /* eslint-disable no-undef*/
@@ -2906,7 +2906,7 @@ function attribAppendAttribute(stationNumber, attributeCode, attribClassName, su
  * @author Konrad Łącki
  *
  * @param {string} stationNumber - stationNumber
- * @param {string} magazineNumber - magazineNumber
+ * @param {string} carrierNumber - magazineNumber
  *
  * @returns {Result_customFunctionCommon}
  *
@@ -2914,37 +2914,15 @@ function attribAppendAttribute(stationNumber, attributeCode, attribClassName, su
  * @throws -1 - Magazine is not intended for this station
  * @throws -1001 - Invalid input parameter
  */
-function cffcStorageLoad(stationNumber, magazineNumber) {
+function cffcStorageLoad(stationNumber, carrierNumber) {
   if (prod_cffcStorageLoad) {
     var incorrectMagazine = generateReturn(-1, "Magazin ist nicht für diese Station vorgesehen");
 
-    if (!magazineNumber || !stationNumber) {
+    if (!carrierNumber || !stationNumber) {
       // eslint-disable-next-line no-magic-numbers
       return generateReturn(-1001, "Ungültige Inputparameter");
     }
-    //--------------------------mlCreateNewMaterialBin---------------------------
-    //! This API (mlCreateNewMaterialBin) must be removed later, it is used now for testing only
-    var materialBinUploadKeys = [
-      "ERROR_CODE",
-      "MATERIAL_BIN_NUMBER",
-      "MATERIAL_BIN_PART_NUMBER",
-      "MATERIAL_BIN_QTY_ACTUAL",
-    ];
-    var materialBinUploadValues = [0, magazineNumber, "PartForTest", 1000];
-
-    var result_mlCreateNewMaterialBin = imsApiService.mlCreateNewMaterialBin(
-      imsApiSessionContext,
-      stationNumber, // String
-      materialBinUploadKeys, // String[]
-      materialBinUploadValues // String[]
-    );
-    var return_value = result_mlCreateNewMaterialBin.return_value;
-    if (return_value != 0) {
-      return generateError(result_mlCreateNewMaterialBin.return_value, "mlCreateNewMaterialBin");
-    }
-
-    //------------------------------------------------------------
-    var lotNumber = magazineNumber;
+    var lotNumber = carrierNumber;
     var serialNumberResultKeys = [ImsApiKey.SERIAL_NUMBER];
     var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
       imsApiSessionContext,
@@ -2999,35 +2977,35 @@ function cffcStorageLoad(stationNumber, magazineNumber) {
       return generateError(result_attribGetAttributeValues.return_value, "attribGetAttributeValues");
     }
 
-    var attributeLagerorte = String(result_attribGetAttributeValues.attributeResultValues[1]);
+    var slotID = String(result_attribGetAttributeValues.attributeResultValues[1]);
 
-    var result_mlGetStorageData = imsApiService.mlGetStorageData(
-      imsApiSessionContext,
-      stationNumber,
-      [
-        new KeyValue(ImsApiKey.MAX_ROWS, "1"),
-        new KeyValue(ImsApiKey.STORAGE_CELL_STATE, "F"),
-        new KeyValue(ImsApiKey.STORAGE_GROUP_NUMBER, attributeLagerorte),
-      ],
+    // var result_mlGetStorageData = imsApiService.mlGetStorageData(
+    //   imsApiSessionContext,
+    //   stationNumber,
+    //   [
+    //     new KeyValue(ImsApiKey.MAX_ROWS, "100"),
+    //     new KeyValue(ImsApiKey.STORAGE_CELL_STATE, "F"),
+    //     new KeyValue(ImsApiKey.STORAGE_NUMBER, attributeLagerorte),
+    //   ],
 
-      [],
-      [],
-      [ImsApiKey.STORAGE_NUMBER],
-      []
-    );
-    if (result_mlGetStorageData.return_value !== 0) {
-      return generateError(result_mlGetStorageData.return_value, "mlGetStorageData");
-    }
-    var position = result_mlGetStorageData.storageResultValues.map(function (pos) {
-      return String(pos);
-    });
+    //   [],
+    //   [],
+    //   [ImsApiKey.STORAGE_ID],
+    //   []
+    // );
+    // if (result_mlGetStorageData.return_value !== 0) {
+    //   return generateError(result_mlGetStorageData.return_value, "mlGetStorageData");
+    // }
+    // var slotID = result_mlGetStorageData.storageResultValues.map(function (pos) {
+    //   return String(pos);
+    // });
 
     var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
       imsApiSessionContext,
       stationNumber,
       [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
 
-      [0, "R", position[0]],
+      [0, "R", slotID],
       [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
 
       []
@@ -3035,7 +3013,7 @@ function cffcStorageLoad(stationNumber, magazineNumber) {
     if (result_mlUpdateStorage.return_value !== 0) {
       return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
     }
-    return generateReturn(0, "", position);
+    return generateReturn(0, "", [slotID]);
   } else {
     return generateReturn(0, "", [5]);
   }
