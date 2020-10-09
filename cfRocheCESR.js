@@ -64,8 +64,8 @@ Change index:
 	  Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode          - Add Config flag for individual function (prod / test:dummy)   
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation       - Update cfpParameterViolation(payLoad) using payLoad
-    Radhoine Jmal           2020-09-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
-    Radhoine Jmal           2020-09-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad (Add create materialBinNumber)
+    Radhoine Jmal           2020-10-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
+    Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad (Add create materialBinNumber)
 */
 
 /* eslint-disable no-undef*/
