@@ -64,8 +64,10 @@ Change index:
 	  Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode          - Add Config flag for individual function (prod / test:dummy)   
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation       - Update cfpParameterViolation(payLoad) using payLoad
-    Radhoine Jmal           2020-09-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
-    Radhoine Jmal           2020-09-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
+    Radhoine Jmal           2020-10-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
+    Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
+    Radhoine Jmal           2020-10-12      Roche CESR      cffcSetupConfirmation       - Update cffcSetupConfirmation (Add config parameter)
+    
 */
 
 /* eslint-disable no-undef*/
@@ -88,6 +90,10 @@ importPackage(java.text);
 // noinspection JSUnresolvedVariable, JSUnresolvedFunction
 importPackage(java.util);
 /* eslint-enable no-undef*/
+
+var APPTYPE = "Customer";
+var CLUSTER = "CESRDev";
+//var HOST = "itacnotebk451.itac.intra";
 
 var prod_cffcAllowOpen = true;
 var prod_cffcCameraOut = true;
@@ -438,41 +444,45 @@ function cffcCameraOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, in
 
 /**
  * @param {string} inputArg1 - stationNumber
- * @param {string} inputArg2 - tokenID
- * @param {string} inputArg3 - userId
- * @param {string} inputArg4 - password
- * @param {string} inputArg5 - requestType
+ * @param {string} inputArg2 - requestType
+ * @param {string} inputArg3 - tokenID
+ * @param {string} inputArg4 - userId
+ * @param {string} inputArg5 - password
  * @returns {Result_customFunctionCommon}
  */
 // eslint-disable-next-line no-shadow
-function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
+function cffcCheckUser(stationNumber, requestType, tokenID, userId, password) {
   if (prod_cffcCheckUser) {
+    // if(!stationNumber || !requestType){
+    //   return generateReturn(-1001, "invalid input")
+    // }
     if (!stationNumber || (tokenID == "" && (userId == "" || password == "")) || requestType == "") {
       // eslint-disable-next-line no-magic-numbers
       return generateReturn(-1001, "invalid input");
     }
-    if (!tokenID) {
-      if (!userId && !password) {
-        return generateReturn(-1001, "invalid input");
-      } else {
-        //mdataGetUserGroupData
-        var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
-        var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
-        var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
-          imsApiSessionContext,
-          stationNumber,
-          mdataGetUserGroupDataFilter,
-          mdataGetUserGroupDataKeys
-        );
-        if (result_mdataGetUserGroupData.return_value !== 0) {
-          return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
-        }
-        var UserGroup = new Array();
-        for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
-          UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
-        }
-        //Check Login requestType
-        if (requestType == 1) {
+    //Check Login requestType
+    if (requestType == 1) {
+      if (!tokenID) {
+        if (!userId && !password) {
+          return generateReturn(-1001, "invalid input");
+        } else {
+          //mdataGetUserGroupData
+          var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
+          var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
+          var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
+            imsApiSessionContext,
+            stationNumber,
+            mdataGetUserGroupDataFilter,
+            mdataGetUserGroupDataKeys
+          );
+          if (result_mdataGetUserGroupData.return_value !== 0) {
+            return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
+          }
+          var UserGroup = new Array();
+          for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
+            UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
+          }
+
           //regRegisterUser
           var result_regRegisterUser = imsApiService.regRegisterUser(
             imsApiSessionContext,
@@ -490,57 +500,59 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
           if (result_regRegisterUser.return_value !== 0) {
             return generateReturn(1, "User/password-combination or token invalid");
           }
-        }
-        if (requestType == 0) {
-          //regUnregisterUser
-          var result_regUnregisterUser = imsApiService.regUnregisterUser(
+          //------------------------attribAppendAttributeValues--------------------------
+          var objectrequestType = 7;
+          var objectNumber = stationNumber;
+          var objectDetail = -1;
+          var bookDate = -1;
+          var allowOverWrite = 1;
+          var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
+          var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
+          var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
             imsApiSessionContext,
-            stationNumber,
-            userId,
-            password,
-            01
+            stationNumber, // String
+            objectrequestType, // int
+            objectNumber, // String
+            objectDetail, // String
+            bookDate, // long
+            allowOverWrite, // int
+            attributeUploadKeys, // String[]
+            attributeUploadValues // String[]
           );
-          if (result_regUnregisterUser.return_value == -104) {
-            return generateReturn(1, "No user has logged into the station");
-          }
-          if (result_regUnregisterUser.return_value == -107) {
-            return generateReturn(1, "Another user is already logged into the station");
-          }
-          if (result_regUnregisterUser.return_value !== 0) {
-            return generateReturn(1, "User/password-combination or token invalid");
+          var return_value = result_attribAppendAttributeValues.return_value;
+          if (return_value != 0) {
+            return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
           }
         }
-      }
-    } else {
-      //mdataGetUserData
-      var mdataGetUserDataFilter = new Array(new KeyValue("USER_TOKEN", tokenID));
-      var mdataGetUserDataKeys = new Array("USER_NAME");
-      var result_mdataGetUserData = imsApiService.mdataGetUserData(
-        imsApiSessionContext,
-        stationNumber,
-        mdataGetUserDataFilter,
-        mdataGetUserDataKeys
-      );
-      if (result_mdataGetUserData.return_value !== 0) {
-        if (userId && password) {
-          //mdataGetUserGroupData
-          var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
-          var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
-          var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
-            imsApiSessionContext,
-            stationNumber,
-            mdataGetUserGroupDataFilter,
-            mdataGetUserGroupDataKeys
-          );
-          if (result_mdataGetUserGroupData.return_value !== 0) {
-            return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
-          }
-          var UserGroup = new Array();
-          for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
-            UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
-          }
-          //Check Login requestType
-          if (requestType == 1) {
+      } else {
+        //mdataGetUserData
+        var mdataGetUserDataFilter = new Array(new KeyValue("USER_TOKEN", tokenID));
+        var mdataGetUserDataKeys = new Array("USER_NAME");
+        var result_mdataGetUserData = imsApiService.mdataGetUserData(
+          imsApiSessionContext,
+          stationNumber,
+          mdataGetUserDataFilter,
+          mdataGetUserDataKeys
+        );
+        if (result_mdataGetUserData.return_value !== 0) {
+          if (userId && password) {
+            //mdataGetUserGroupData
+            var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
+            var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
+            var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
+              imsApiSessionContext,
+              stationNumber,
+              mdataGetUserGroupDataFilter,
+              mdataGetUserGroupDataKeys
+            );
+            if (result_mdataGetUserGroupData.return_value !== 0) {
+              return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
+            }
+            var UserGroup = new Array();
+            for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
+              UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
+            }
+
             //regRegisterUser
             var result_regRegisterUser = imsApiService.regRegisterUser(
               imsApiSessionContext,
@@ -558,48 +570,51 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             if (result_regRegisterUser.return_value !== 0) {
               return generateReturn(1, "User/password-combination or token invalid");
             }
-          }
-          if (requestType == 0) {
-            //regUnregisterUser
-            var result_regUnregisterUser = imsApiService.regUnregisterUser(
+            //------------------------attribAppendAttributeValues--------------------------
+            var objectrequestType = 7;
+            var objectNumber = stationNumber;
+            var objectDetail = -1;
+            var bookDate = -1;
+            var allowOverWrite = 1;
+            var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
+            var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
+            var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
               imsApiSessionContext,
-              stationNumber,
-              userId,
-              password,
-              01
+              stationNumber, // String
+              objectrequestType, // int
+              objectNumber, // String
+              objectDetail, // String
+              bookDate, // long
+              allowOverWrite, // int
+              attributeUploadKeys, // String[]
+              attributeUploadValues // String[]
             );
-            if (result_regUnregisterUser.return_value == -104) {
-              return generateReturn(1, "No user has logged into the station");
+            var return_value = result_attribAppendAttributeValues.return_value;
+            if (return_value != 0) {
+              return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
             }
-            if (result_regUnregisterUser.return_value == -107) {
-              return generateReturn(1, "Another user is already logged into the station");
-            }
-            if (result_regUnregisterUser.return_value !== 0) {
-              return generateReturn(1, "User/password-combination or token invalid");
-            }
+          } else {
+            return generateReturn(1, "User/password-combination or token invalid");
           }
         } else {
-          return generateReturn(1, "User/password-combination or token invalid");
-        }
-      } else {
-        var userId = result_mdataGetUserData.mdataGetUserDataValues[0];
-        //mdataGetUserGroupData
-        var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
-        var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
-        var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
-          imsApiSessionContext,
-          stationNumber,
-          mdataGetUserGroupDataFilter,
-          mdataGetUserGroupDataKeys
-        );
-        if (result_mdataGetUserGroupData.return_value !== 0) {
-          return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
-        }
-        var UserGroup = new Array();
-        for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
-          UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
-        }
-        if (requestType == 1) {
+          var userId = result_mdataGetUserData.mdataGetUserDataValues[0];
+          //mdataGetUserGroupData
+          var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
+          var mdataGetUserGroupDataKeys = new Array("USER_GROUP_NAME");
+          var result_mdataGetUserGroupData = imsApiService.mdataGetUserGroupData(
+            imsApiSessionContext,
+            stationNumber,
+            mdataGetUserGroupDataFilter,
+            mdataGetUserGroupDataKeys
+          );
+          if (result_mdataGetUserGroupData.return_value !== 0) {
+            return generateError(-1002, "Fehler in MES API mdataGetUserGroupData");
+          }
+          var UserGroup = new Array();
+          for (var i = 0; i < result_mdataGetUserGroupData.mdataGetUserGroupDataValues.length; i++) {
+            UserGroup.push(result_mdataGetUserGroupData.mdataGetUserGroupDataValues[i]);
+          }
+
           var result_regRegisterUser = imsApiService.regRegisterUser(
             imsApiSessionContext,
             stationNumber,
@@ -616,29 +631,101 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
           if (result_regRegisterUser.return_value !== 0) {
             return generateReturn(1, "User/password-combination or token invalid");
           }
-        }
-        if (requestType == 0) {
-          //regUnregisterUser
-          var result_regUnregisterUser = imsApiService.regUnregisterUser(
+          //------------------------attribAppendAttributeValues--------------------------
+          var objectrequestType = 7;
+          var objectNumber = stationNumber;
+          var objectDetail = -1;
+          var bookDate = -1;
+          var allowOverWrite = 1;
+          var attributeUploadKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
+          var attributeUploadValues = ["USER_INFO", userId + "|" + password + "|" + tokenID, 0];
+          var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
             imsApiSessionContext,
-            stationNumber,
-            null,
-            tokenID,
-            01
+            stationNumber, // String
+            objectrequestType, // int
+            objectNumber, // String
+            objectDetail, // String
+            bookDate, // long
+            allowOverWrite, // int
+            attributeUploadKeys, // String[]
+            attributeUploadValues // String[]
           );
-          if (result_regUnregisterUser.return_value == -104) {
-            return generateReturn(1, "No user has logged into the station");
-          }
-          if (result_regUnregisterUser.return_value == -107) {
-            return generateReturn(1, "Another user is already logged into the station");
-          }
-          if (result_regUnregisterUser.return_value !== 0) {
-            return generateReturn(1, "User/password-combination or token invalid");
+          var return_value = result_attribAppendAttributeValues.return_value;
+          if (return_value != 0) {
+            return generateError(-1002, "Fehler in MES API attribAppendAttributeValues");
           }
         }
       }
+      return generateReturn(0, "", [userId, UserGroup[0]]);
     }
-    return generateReturn(0, "", [userId, UserGroup[0]]);
+    if (requestType == 0) {
+      var objectrequestType = 7;
+      var objectNumber = stationNumber;
+      var objectDetail = -1;
+      var attributeCodeArray = ["USER_INFO"];
+      var allMergeLevel = 0;
+      var attributeResultKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
+      var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+        imsApiSessionContext,
+        stationNumber, // String
+        objectrequestType, // int
+        objectNumber, // String
+        objectDetail, // String
+        attributeCodeArray, // String[]
+        allMergeLevel, // int
+        attributeResultKeys // String[]
+      );
+      var return_value = result_attribGetAttributeValues.return_value;
+      if (return_value != 0) {
+        return generateError(-1002, "Fehler in MES API attribGetAttributeValues");
+      }
+      var slpt = "" + result_attribGetAttributeValues.attributeResultValues[1];
+      logHandler.logMessage("result_attribGetAttributeValues: " + slpt);
+      slpt = slpt.split("|");
+      logHandler.logMessage("result_attribGetAttributeValues: " + slpt);
+      userId = slpt[0];
+      password = slpt[1];
+      tokenID = slpt[2];
+      logHandler.logMessage("0: " + slpt[0]);
+      logHandler.logMessage("1: " + slpt[1]);
+      logHandler.logMessage("2: " + slpt[2]);
+      //--------------------regUnregisterUser--------------------
+      var result_regUnregisterUser = imsApiService.regUnregisterUser(
+        imsApiSessionContext,
+        stationNumber,
+        null,
+        tokenID,
+        01
+      );
+      if (result_regUnregisterUser.return_value == -104) {
+        return generateReturn(1, "No user has logged into the station");
+      }
+      if (result_regUnregisterUser.return_value == -107) {
+        return generateReturn(1, "Another user is already logged into the station");
+      }
+      if (result_regUnregisterUser.return_value !== 0) {
+        return generateReturn(1, "User/password-combination or token invalid");
+      }
+      var objectType = 7;
+      var objectNumber = stationNumber;
+      var objectDetail = -1;
+      var attributeCode = "USER_INFO";
+      var attributeValueKey = -1;
+      var result_attribRemoveAttributeValue = imsApiService.attribRemoveAttributeValue(
+        imsApiSessionContext,
+        stationNumber, // String
+        objectType, // int
+        objectNumber, // String
+        objectDetail, // String
+        attributeCode, // String
+        attributeValueKey // String
+      );
+      var return_value = result_attribRemoveAttributeValue.return_value;
+      if (return_value != 0) {
+        return generateError(-1002, "Fehler in MES API attribRemoveAttributeValue");
+      }
+      return generateReturn(0, "");
+    }
   } else {
     return generateReturn(0, "", ["userID", "userGroup"]);
   }
@@ -860,7 +947,6 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
  */
 function cffcIEOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, inputArg6, inputArg7, inputArg8, inputArg9) {
   // // TODO: implement after specification is ready
-
   if (prod_cffcIEOut) {
     var expectedNumberOfParams = 6;
     try {
@@ -1875,7 +1961,7 @@ function cffcMachineIn(stationNumber, serialNumber) {
       0
     );
 
-    if (result_setupCheck.return_value != 0) {
+    if (result_setupCheck.return_value != 0 && result_setupCheck.return_value != 604) {
       return generateReturn(-1, "ErrorMessage: “Setup is not valid”");
     }
 
@@ -2429,66 +2515,7 @@ function cffcMachineOut(
     /*  this API makes it possible to update/adjust values for delected configuration paramaters,
         only the parameter values of a specific context can be updated.
     */
-    var options = [];
-    //! In the configuration client, it's necessary to identify the CONFIG_APPTYPE/CLUSTER/HOST and the PARAMATER_NAME or PARAMATER_ID
-    var configContext = new Array(
-      new KeyValue("CONFIG_APPTYPE", "Internal"),
-      new KeyValue("CONFIG_CLUSTER", "ZiedB"),
-      new KeyValue("CONFIG_HOST", "itacnotebk451.itac.intra")
-    );
-    var parameterFilter = new Array(new KeyValue("PARAMETER_ID", "2464"));
-    var parameterResultKeys = [];
-    var resultKeys = [ImsApiKey.CONFIG_KEY, ImsApiKey.CONFIG_VALUE];
-    var result_configGetValues = imsApiService.configGetValues(
-      imsApiSessionContext,
-      options, // KeyValue[]
-      configContext, // KeyValue[]
-      parameterFilter, // KeyValue[]
-      parameterResultKeys, // String[]
-      resultKeys // String[]
-    );
-    var return_value = result_configGetValues.return_value;
-    if (return_value != 0) {
-      return generateError(-1002, "Fehler in MES API configGetValues");
-    }
-    var resultValues = result_configGetValues.resultValues;
-    var uploadValues = [];
-    for (var i = 0; i < result_configGetValues.resultValues.length / 2; i++) {
-      if (result_configGetValues.resultValues[i * 2] == stationNumber) {
-        var val = result_configGetValues.resultValues[i * 2 + 1].split("|");
-        //val[1]= 1;  // Station not available
-        result_configGetValues.resultValues[i * 2 + 1] = val[0] + val[1] + "|0"; // 0: station available
-      }
-      uploadValues.push(
-        result_configGetValues.resultValues[i * 2],
-        result_configGetValues.resultValues[i * 2 + 1],
-        "2464"
-      );
-      logHandler.logMessage("Upvalues1 " + uploadValues);
-    }
-
-    //--------------configUpdateValues-----------------
-    var options = [];
-    var configContext = new Array(
-      new KeyValue("CONFIG_APPTYPE", "Internal"),
-      new KeyValue("CONFIG_CLUSTER", "ZiedB"),
-      new KeyValue("CONFIG_HOST", "itacnotebk451.itac.intra")
-    );
-    var uploadKeys = ["CONFIG_KEY", "CONFIG_VALUE", "PARAMETER_ID"];
-    var resultKeys = [];
-    var result_configUpdateValues = imsApiService.configUpdateValues(
-      imsApiSessionContext,
-      options, // KeyValue[]
-      configContext, // KeyValue[]
-      uploadKeys, // String[]
-      uploadValues, // String[]
-      resultKeys // String[]
-    );
-    var return_value = result_configUpdateValues.return_value;
-    if (return_value != 0) {
-      return generateError(-1002, "Fehler in MES API configUpdateValues");
-    }
-    var resultValues = result_configUpdateValues.resultValues;
+    updateConfigForWayDecision(stationNumber, "0");
     return generateReturn(0, "", [finished, total]);
   } else {
     return generateReturn(0, "", [57, 120]);
@@ -2751,75 +2778,79 @@ function cffcSetupConfirmation(stationNumber, successful, partChamber) {
         return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
       }
     }
-    //----------------------configGetValues------------------
-    /*  this API makes it possible to update/adjust values for delected configuration paramaters,
-        only the parameter values of a specific context can be updated.
-    */
-    var options = [];
-    //! In the configuration client, it's necessary to identify the CONFIG_APPTYPE/CLUSTER/HOST and the PARAMATER_NAME or PARAMATER_ID
-    var configContext = new Array(
-      new KeyValue("CONFIG_APPTYPE", "Internal"),
-      new KeyValue("CONFIG_CLUSTER", "ZiedB"),
-      new KeyValue("CONFIG_HOST", "itacnotebk451.itac.intra")
-    );
-    var parameterFilter = new Array(new KeyValue("PARAMETER_ID", "2464"));
-    var parameterResultKeys = [];
-    var resultKeys = [ImsApiKey.CONFIG_KEY, ImsApiKey.CONFIG_VALUE];
-    var result_configGetValues = imsApiService.configGetValues(
-      imsApiSessionContext,
-      options, // KeyValue[]
-      configContext, // KeyValue[]
-      parameterFilter, // KeyValue[]
-      parameterResultKeys, // String[]
-      resultKeys // String[]
-    );
-    var return_value = result_configGetValues.return_value;
-    if (return_value != 0) {
-      return generateError(-1002, "Fehler in MES API configGetValues");
-    }
-    var resultValues = result_configGetValues.resultValues;
-    var uploadValues = [];
-    for (var i = 0; i < result_configGetValues.resultValues.length / 2; i++) {
-      if (result_configGetValues.resultValues[i * 2] == stationNumber) {
-        var val = result_configGetValues.resultValues[i * 2 + 1].split("|");
-        //val[1]= 1;  // Station not available
-        result_configGetValues.resultValues[i * 2 + 1] = val[0] + val[1] + "|1";
-      }
-      uploadValues.push(
-        result_configGetValues.resultValues[i * 2],
-        result_configGetValues.resultValues[i * 2 + 1],
-        "2464"
-      );
-      logHandler.logMessage("Upvalues1 " + uploadValues);
-    }
 
-    //--------------configUpdateValues-----------------
-    var options = [];
-    var configContext = new Array(
-      new KeyValue("CONFIG_APPTYPE", "Internal"),
-      new KeyValue("CONFIG_CLUSTER", "ZiedB"),
-      new KeyValue("CONFIG_HOST", "itacnotebk451.itac.intra")
-    );
-    var uploadKeys = ["CONFIG_KEY", "CONFIG_VALUE", "PARAMETER_ID"];
-    var resultKeys = [];
-    var result_configUpdateValues = imsApiService.configUpdateValues(
-      imsApiSessionContext,
-      options, // KeyValue[]
-      configContext, // KeyValue[]
-      uploadKeys, // String[]
-      uploadValues, // String[]
-      resultKeys // String[]
-    );
-    var return_value = result_configUpdateValues.return_value;
-    if (return_value != 0) {
-      return generateError(-1002, "Fehler in MES API configUpdateValues");
-    }
-    var resultValues = result_configUpdateValues.resultValues;
+    updateConfigForWayDecision(stationNumber, 1);
     return generateReturn(0, "");
   } else {
     return generateReturn(0, "");
   }
 }
+//----------------------configGetValues------------------
+/*  this API makes it possible to update/adjust values for delected configuration paramaters,
+        only the parameter values of a specific context can be updated.
+    */
+/**
+ * @param {string} stationNumber
+ * @param {string} stationState
+ */
+function updateConfigForWayDecision(stationNumber, stationState) {
+  if (!stationNumber || !stationState) {
+    // eslint-disable-next-line no-magic-numbers
+    return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
+  }
+  var options = [];
+  //! In the configuration client, it's necessary to identify the CONFIG_APPTYPE/CLUSTER/HOST and the PARAMATER_NAME or PARAMATER_ID
+  var configContext = new Array(new KeyValue("CONFIG_APPTYPE", APPTYPE), new KeyValue("CONFIG_CLUSTER", CLUSTER));
+  var parameterFilter = new Array(new KeyValue("PARAMETER_ID", "1576"));
+  var parameterResultKeys = [];
+  var resultKeys = [ImsApiKey.CONFIG_KEY, ImsApiKey.CONFIG_VALUE];
+  var result_configGetValues = imsApiService.configGetValues(
+    imsApiSessionContext,
+    options, // KeyValue[]
+    configContext, // KeyValue[]
+    parameterFilter, // KeyValue[]
+    parameterResultKeys, // String[]
+    resultKeys // String[]
+  );
+  var return_value = result_configGetValues.return_value;
+  if (return_value != 0) {
+    return generateError(-1002, "Fehler in MES API configGetValues");
+  }
+  var resultValues = result_configGetValues.resultValues;
+  var uploadValues = [];
+  for (var i = 0; i < result_configGetValues.resultValues.length / 2; i++) {
+    if (result_configGetValues.resultValues[i * 2] == stationNumber) {
+      var val = result_configGetValues.resultValues[i * 2 + 1].split("|");
+      //val[1]= 1;  // Station not available
+      result_configGetValues.resultValues[i * 2 + 1] = val[0] + val[1] + "|" + stationState;
+    }
+    uploadValues.push(
+      result_configGetValues.resultValues[i * 2],
+      result_configGetValues.resultValues[i * 2 + 1],
+      "1576"
+    );
+    logHandler.logMessage("Upvalues1 " + uploadValues);
+  }
+  //--------------configUpdateValues-----------------
+  var options = [];
+  var configContext = new Array(new KeyValue("CONFIG_APPTYPE", APPTYPE), new KeyValue("CONFIG_CLUSTER", CLUSTER));
+  var uploadKeys = ["CONFIG_KEY", "CONFIG_VALUE", "PARAMETER_ID"];
+  var resultKeys = [];
+  var result_configUpdateValues = imsApiService.configUpdateValues(
+    imsApiSessionContext,
+    options, // KeyValue[]
+    configContext, // KeyValue[]
+    uploadKeys, // String[]
+    uploadValues, // String[]
+    resultKeys // String[]
+  );
+  var return_value = result_configUpdateValues.return_value;
+  if (return_value != 0) {
+    return generateError(-1002, "Fehler in MES API configUpdateValues");
+  }
+  var resultValues = result_configUpdateValues.resultValues;
+}
+
 /*
 /function cffcSetupConfirmation(stationNumber, partChamber) {
     if (!stationNumber || partChamber == null) {
@@ -2916,8 +2947,6 @@ function attribAppendAttribute(stationNumber, attributeCode, attribClassName, su
  */
 function cffcStorageLoad(stationNumber, carrierNumber) {
   if (prod_cffcStorageLoad) {
-    var incorrectMagazine = generateReturn(-1, "Magazin ist nicht für diese Station vorgesehen");
-
     if (!carrierNumber || !stationNumber) {
       // eslint-disable-next-line no-magic-numbers
       return generateReturn(-1001, "Ungültige Inputparameter");
@@ -2939,7 +2968,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
     }
     var serialNumberList = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues;
     if (serialNumberList.length == 0) {
-      return incorrectMagazine;
+      return generateReturn(1, "Magazin ist nicht für diese Station vorgesehen");
     }
     var serialNumber = String(serialNumberList[0]);
     var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
@@ -2949,7 +2978,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
       "-1",
       0,
       0,
-      1,
+      0,
       [ImsApiKey.STATION_NUMBER]
     );
     if (result_trGetNextProductionStep.return_value !== 0) {
