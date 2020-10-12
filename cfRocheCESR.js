@@ -2724,19 +2724,21 @@ function cffcSetupConfirmation(stationNumber, successful, partChamber) {
                     return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
                 }
             }
-            return generateReturn(0, "");
-        }
-        if (kammer1 == "true") {
-            result_attribAppendAttributeValues = attribAppendAttribute(
-                stationNumber,
-                tempVar,
-                "STATION_GERUESTET",
-                successful
-            );
 
-            if (result_attribAppendAttributeValues.return_value !== 0) {
-                return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
+            if (kammer1 == "true") {
+                result_attribAppendAttributeValues = attribAppendAttribute(
+                    stationNumber,
+                    tempVar,
+                    "STATION_GERUESTET",
+                    successful
+                );
+
+                if (result_attribAppendAttributeValues.return_value !== 0) {
+                    return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
+                }
             }
+
+            return generateReturn(0, ""); // @Rouf to be validated
         }
 
         updateConfigForWayDecision(stationNumber, 1);
