@@ -3034,7 +3034,7 @@ function cffcStorageLoadConfirmation(stationNumber, magazineNumber, position, lo
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "Ungültige Inputparameter");
         }
-        loadTimestamp = parseInt(loadTimestamp) * 1000;
+        loadTimestamp = parseInt(loadTimestamp);
 
         var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
             imsApiSessionContext,
@@ -3149,7 +3149,7 @@ function cffcStorageUnloadConfirmation(stationNumber, magazineNumber, slotId, un
             return generateReturn(-1001, "Ungültige Inputparamete");
         }
 
-        unloadTimestamp = parseInt(unloadTimestamp) * 1000;
+        unloadTimestamp = parseInt(unloadTimestamp);
 
         var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
             imsApiSessionContext,
