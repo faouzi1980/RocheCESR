@@ -769,6 +769,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
                 );
             }
 
+            var visionStation
             // // * This section for the upload of the buffered measures on the PMU station
             // //--------------------------------trGetStationSetting---------------------------------
             // var stationSettingResultKeys = ["WORKORDER_NUMBER", "PROCESS_LAYER", "PART_NUMBER"];
