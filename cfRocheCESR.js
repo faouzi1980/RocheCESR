@@ -3777,23 +3777,37 @@ function cfpSetup(payLoad) {
 }
 
 /**
- * @param {string} stationNumber
- * @param {number} slotId
- * @param {string} magazineNumber
+ * @param {string} payLoad
  * @returns {Result_customFunctionCommon}
  */
-function cfpStorageUnload(stationNumber, slotId, magazineNumber) {
+function cfpStorageUnload(payLoad) {
     // TODO: implement after specification is ready
-
-    var expectedNumberOfParams = 3;
-    try {
-        checkForNullAndPipes(arguments, expectedNumberOfParams);
-    } catch (e) {
-        // eslint-disable-next-line no-magic-numbers
-        return generateReturn(-1001, e.toString());
+    if (!payLoad) {
+        return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
     }
 
-    return generateReturn(0, "");
+    var payLoadData;
+
+    try {
+        payLoadData = JSON.parse(payLoad);
+    } catch (e) {
+        return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
+    }
+
+    if (!payLoadData.slotId || !payLoadData.carrierNumber) {
+        return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
+    }
+
+    // var stationNumber = payLoadData.stationNumber;
+    var slotId = payLoadData.slotId;
+    var carrierNumber = payLoadData.carrierNumber;
+
+    // for (param of payLoadData) {
+    //     results.push(param);
+    // }
+
+    var results = [slotId, carrierNumber];
+    return generateReturn(0, "", results);
 }
 
 /**
