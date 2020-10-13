@@ -72,7 +72,7 @@ Change index:
     Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcUnloadChamberConfirmation   - Refactor cffcUnloadChamberConfirmation - Unload PlateId from the slotID 
     Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber	        - Update cffcGetSerialNumber to manage substructID.
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoad             - (By Aziz) Update cffcStorageLoad / cffcStorageLoadConfirmation / cffcStorageUnloadConfirmation
-
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber         - Add configuration function to get param from station config
 */
 
 /* eslint-disable no-undef*/
