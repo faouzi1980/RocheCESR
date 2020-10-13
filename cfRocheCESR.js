@@ -61,13 +61,17 @@ Change index:
                                                                                           to change the state of stataion(Not available)
                                                             cffcMachineOut              - Add ConfigGetValues API and configUpdateValues 
                                                                                           to change the state of stataion(Available)
-	  Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
+	Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode          - Add Config flag for individual function (prod / test:dummy)   
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation       - Update cfpParameterViolation(payLoad) using payLoad
     Radhoine Jmal           2020-10-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
     Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
     Radhoine Jmal           2020-10-12      Roche CESR      cffcSetupConfirmation       - Update cffcSetupConfirmation (Add config parameter)
     Radhoine Jmal           2020-10-12      Roche CESR      cffcCheckUser               - Update cffcCheckUser: Add unregister user without password  
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcLoadChamberConfirmation - Refactor cffcLoadChamberConfirmation - Load PlateId into the slotID 
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcUnloadChamberConfirmation   - Refactor cffcUnloadChamberConfirmation - Unload PlateId from the slotID 
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber	        - Update cffcGetSerialNumber to manage substructID.
+
 */
 
 /* eslint-disable no-undef*/
@@ -716,34 +720,30 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
             var result_trGetNextSerialNumber = imsApiService.trGetNextSerialNumber(
                 imsApiSessionContext,
                 stationNumber, // --> String
-                "-1", // --> String
-                partNumber, //+ "|I" --> String //! Waiting for prefixes specification
-                1 // --> int
-            );
-            var return_value = result_trGetNextSerialNumber.return_value;
-            if (return_value != 0) {
-                return generateReturn(-1002, "Fehler in MES API trGetNextSerialNumber : " + return_value);
-            }
-            var serialNumberArray = result_trGetNextSerialNumber.serialNumberArray;
-            for (var i = 0; i < serialNumberArray.length; i++) {
-                //serialNumbersOut.push(serialNumberArray[i].serialNumber);
-                serialNumberRef = serialNumberArray[i].serialNumber;
-            }
-
-            var result_trGetNextSerialNumber = imsApiService.trGetNextSerialNumber(
-                imsApiSessionContext,
-                stationNumber, // --> String
-                "-1", // --> String
-                partNumber, //+ "|C" --> String //! Waiting for prefixes specification
+                workOrderNumber, // --> String (mandatory to get WO text 1)
+                partNumber,
                 amount // --> int
             );
             var return_value = result_trGetNextSerialNumber.return_value;
             if (return_value != 0) {
                 return generateReturn(-1002, "Fehler in MES API trGetNextSerialNumber : " + return_value);
             }
+
             var serialNumberArray = result_trGetNextSerialNumber.serialNumberArray;
+
+            var serialNumberRef = "001" + serialNumberArray[0].serialNumber;
+            serialNumbersOut.push(serialNumberRef);
+            var serialNumberRefPos = "0";
+
+            var snrArray = new Array();
+
             for (var i = 0; i < serialNumberArray.length; i++) {
-                serialNumbersOut.push(serialNumberArray[i].serialNumber);
+                var snrData = new SerialNumberData();
+                snrData.serialNumber = "002" + serialNumberArray[i].serialNumber;
+                snrData.serialNumberPos = "" + i + 1;
+                snrData.serialNumberOld = "";
+                snrArray.push(snrData);
+                serialNumbersOut.push(snrData.serialNumber);
             }
 
             var bomVersion = "-1";
@@ -758,7 +758,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
                 serialNumberRef, // --> String
                 serialNumberRefPos, // --> String
                 processLayer, // --> int
-                serialNumberArray, // --> SerialNumberData[]
+                snrArray, // --> SerialNumberData[]
                 activateWorkOrder // --> int
             );
             var return_value = result_trAssignSerialNumberForProductOrWorkOrder.return_value;
@@ -769,89 +769,90 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
                 );
             }
 
-            // * This section for the upload of the buffered measures on the PMU station
-            //--------------------------------trGetStationSetting---------------------------------
-            var stationSettingResultKeys = ["WORKORDER_NUMBER", "PROCESS_LAYER", "PART_NUMBER"];
-            var result_trGetStationSetting = imsApiService.trGetStationSetting(
-                imsApiSessionContext,
-                stationNumber, // --> String
-                stationSettingResultKeys // --> String[]
-            );
-            var return_value = result_trGetStationSetting.return_value;
-            if (return_value != 0) {
-                return generateReturn(-1002, "Fehler in MES API trGetStationSetting : " + return_value);
-            }
-            var stationSettingResultValues = result_trGetStationSetting.stationSettingResultValues;
-            var workOrderNumber = stationSettingResultValues[0];
-            var processLayer = stationSettingResultValues[1];
-            var partNumber = stationSettingResultValues[2];
+            // // * This section for the upload of the buffered measures on the PMU station
+            // //--------------------------------trGetStationSetting---------------------------------
+            // var stationSettingResultKeys = ["WORKORDER_NUMBER", "PROCESS_LAYER", "PART_NUMBER"];
+            // var result_trGetStationSetting = imsApiService.trGetStationSetting(
+            //     imsApiSessionContext,
+            //     stationNumber, // --> String
+            //     stationSettingResultKeys // --> String[]
+            // );
+            // var return_value = result_trGetStationSetting.return_value;
+            // if (return_value != 0) {
+            //     return generateReturn(-1002, "Fehler in MES API trGetStationSetting : " + return_value);
+            // }
+            // var stationSettingResultValues = result_trGetStationSetting.stationSettingResultValues;
+            // var workOrderNumber = stationSettingResultValues[0];
+            // var processLayer = stationSettingResultValues[1];
+            // var partNumber = stationSettingResultValues[2];
 
-            //--------------------------------attribGetAttributeValues---------------------------------
-            var objectType = 7;
-            var objectNumber = stationNumber;
-            var objectDetail = "-1";
-            var attributeCodeArray = ["PMU_MEAS"];
-            var allMergeLevel = 1;
-            var attributeResultKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
-            var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-                imsApiSessionContext,
-                stationNumber, // String
-                objectType, // int
-                objectNumber, // String
-                objectDetail, // String
-                attributeCodeArray, // String[]
-                allMergeLevel, // int
-                attributeResultKeys // String[]
-            );
-            var return_value = result_attribGetAttributeValues.return_value;
-            if (return_value != 0) {
-                return generateReturn(-1002, "Fehler in MES API attribGetAttributeValues : " + return_value);
-            }
-            var attributeResultValues = result_attribGetAttributeValues.attributeResultValues;
-            var measurementData = "" + attributeResultValues[2];
+            // //--------------------------------attribGetAttributeValues---------------------------------
+            // var objectType = 7;
+            // var objectNumber = stationNumber;
+            // var objectDetail = "-1";
+            // var attributeCodeArray = ["PMU_MEAS"];
+            // var allMergeLevel = 1;
+            // var attributeResultKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
+            // var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+            //     imsApiSessionContext,
+            //     stationNumber, // String
+            //     objectType, // int
+            //     objectNumber, // String
+            //     objectDetail, // String
+            //     attributeCodeArray, // String[]
+            //     allMergeLevel, // int
+            //     attributeResultKeys // String[]
+            // );
+            // var return_value = result_attribGetAttributeValues.return_value;
+            // if (return_value != 0) {
+            //     return generateReturn(-1002, "Fehler in MES API attribGetAttributeValues : " + return_value);
+            // }
+            // var attributeResultValues = result_attribGetAttributeValues.attributeResultValues;
+            // var measurementData = "" + attributeResultValues[2];
 
-            //--------------------------------trUploadResultDataAndRecipe---------------------------------
-            var measureValues = [];
-            if (!(measurementData == undefined || measurementData == null || measurementData == "")) {
-                var mv = measurementData.split("|");
+            // //--------------------------------trUploadResultDataAndRecipe---------------------------------
+            // var measureValues = [];
+            // if (!(measurementData == undefined || measurementData == null || measurementData == "")) {
+            //     var mv = measurementData.split("|");
 
-                for (var i = 0; i < mv.length; i = i + 2) {
-                    measureValues.push("0", "0", "" + mv[i], "" + mv[i + 1]);
-                }
+            //     for (var i = 0; i < mv.length; i = i + 2) {
+            //         measureValues.push("0", "0", "" + mv[i], "" + mv[i + 1]);
+            //     }
 
-                var stationNumber = stationNumber;
-                var processLayer = processLayer;
-                var recipeVersionId = "-1";
-                var serialNumberRef = serialNumberRef;
-                var serialNumberRefPos = "-1";
-                var serialNumberState = 0;
-                var duplicateSerialNumber = 1;
-                var bookDate = -1;
-                var cycleTime = 0;
-                var recipeVersionMode = "-1";
-                var resultUploadKeys = ["ERROR_CODE", "MEASURE_FAIL_CODE", "MEASURE_NAME", "MEASURE_VALUE"];
-                var resultUploadValues = measureValues;
+            //     var stationNumber = stationNumber;
+            //     var processLayer = processLayer;
+            //     var recipeVersionId = "-1";
+            //     var serialNumberRef = serialNumberRef;
+            //     var serialNumberRefPos = "-1";
+            //     var serialNumberState = 0;
+            //     var duplicateSerialNumber = 1;
+            //     var bookDate = -1;
+            //     var cycleTime = 0;
+            //     var recipeVersionMode = "-1";
+            //     var resultUploadKeys = ["ERROR_CODE", "MEASURE_FAIL_CODE", "MEASURE_NAME", "MEASURE_VALUE"];
+            //     var resultUploadValues = measureValues;
 
-                var result_trUploadResultDataAndRecipe = imsApiService.trUploadResultDataAndRecipe(
-                    imsApiSessionContext,
-                    stationNumber, // String
-                    processLayer, // int
-                    recipeVersionId, // int
-                    serialNumberRef, // String
-                    serialNumberRefPos, // String
-                    serialNumberState, // int
-                    duplicateSerialNumber, // int
-                    bookDate, // long
-                    cycleTime, // float
-                    recipeVersionMode, // int
-                    resultUploadKeys, // String[]
-                    resultUploadValues // String[]
-                );
-                var return_value = result_trUploadResultDataAndRecipe.return_value;
-                if (return_value != 0) {
-                    return generateReturn(-1002, "Fehler in MES API trUploadResultDataAndRecipe : " + return_value);
-                }
-            }
+            //     var result_trUploadResultDataAndRecipe = imsApiService.trUploadResultDataAndRecipe(
+            //         imsApiSessionContext,
+            //         stationNumber, // String
+            //         processLayer, // int
+            //         recipeVersionId, // int
+            //         serialNumberRef, // String
+            //         serialNumberRefPos, // String
+            //         serialNumberState, // int
+            //         duplicateSerialNumber, // int
+            //         bookDate, // long
+            //         cycleTime, // float
+            //         recipeVersionMode, // int
+            //         resultUploadKeys, // String[]
+            //         resultUploadValues // String[]
+            //     );
+            //     var return_value = result_trUploadResultDataAndRecipe.return_value;
+            //     if (return_value != 0) {
+            //         return generateReturn(-1002, "Fehler in MES API trUploadResultDataAndRecipe : " + return_value);
+            //     }
+            // }
+            return generateReturn(0, "", serialNumbersOut);
         } catch (e) {
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, e.toString());
@@ -996,6 +997,31 @@ function cffcIEOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, inputA
     }
 }
 
+function getSubstractIdFromSnr(snr) {
+    var ref = snr;
+    ref = "001" + ref.slice(3);
+    return ref;
+}
+
+function getFirstSnrPosition(stationNumber, snr) {
+    var first;
+
+    var result_trGetSerialNumberBySerialNumberRef = imsApiService.trGetSerialNumberBySerialNumberRef(
+        imsApiSessionContext,
+        stationNumber, // String
+        (serialNumberRef = snr), // String
+        (serialNumberRefPos = "-1") // String
+    );
+    var return_value = result_trGetSerialNumberBySerialNumberRef.return_value;
+    if (return_value != 0 && return_value != -203) {
+        return "-1";
+    }
+    var serialNumberArray = result_trGetSerialNumberBySerialNumberRef.serialNumberArray;
+    first = serialNumberArray[0].serialNumber;
+
+    return first;
+}
+
 /**
  * @param {string} stationNumber
  * @param {string} serialNumber
@@ -1009,116 +1035,38 @@ function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, load
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "Ungültige Inputparameter");
         }
-        loadTimeStamp = parseInt(loadTimeStamp) * 1000;
-        var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
+        //loadTimeStamp = parseInt(loadTimeStamp) * 1000;
+
+        //--------------------------------------------------------------------------------------------------
+        var firstSnr = getFirstSnrPosition(stationNumber, serialNumber);
+        var substractId = getSubstractIdFromSnr(serialNumber);
+        var assignSerialNumberToCarrierKeys = ["ERROR_CODE", "SERIAL_NUMBER", "SERIAL_NUMBER_POS"];
+        var assignSerialNumberToCarrierValues = [0, firstSnr, "-1"];
+
+        var result_equAssignSerialNumberToCarrier = imsApiService.equAssignSerialNumberToCarrier(
             imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            loadTimeStamp,
-            position,
-            "-1",
-            // eslint-disable-next-line no-magic-numbers
-            89
-        ); // WA work order (TR booking)
-        if (result_mlSetMaterialBinLocation.return_value !== 0) {
-            return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
-        }
-        var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
-            imsApiSessionContext,
-            stationNumber,
-            [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
-            [0, "O", position],
-            [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
-            []
+            stationNumber, // String
+            (equipmentNumber = stationNumber), // String
+            (equipmentIndex = 0), // String
+            (setState = 0), // int
+            assignSerialNumberToCarrierKeys, // String[]
+            assignSerialNumberToCarrierValues // String[]
         );
-        if (result_mlUpdateStorage.return_value !== 0) {
-            return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
+        var return_value = result_equAssignSerialNumberToCarrier.return_value;
+        if (return_value != 0) {
+            return generateError(return_value, "Fehler in MES API equAssignSerialNumberToCarrier");
         }
-        var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-            imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            "-1",
-            [ImsApiKey.WORKORDER_NUMBER]
-        );
-        if (result_trGetSerialNumberInfo.return_value !== 0) {
-            return generateError(result_mlUpdateStorage.return_value, "result_trGetSerialNumberInfo");
-        }
-        var workorderNumber = String(result_trGetSerialNumberInfo.serialNumberResultValues[0]);
-        if (workorderNumber !== "TEMP_SENSOREN") {
-            var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-                imsApiSessionContext,
-                stationNumber,
-                serialNumber,
-                "-1",
-                0,
-                0,
-                1,
-                [ImsApiKey.WORKSTEP_AVO]
-            );
-            if (result_trGetNextProductionStep.return_value !== 0) {
-                return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
-            }
-            var nextWorkstep = parseInt(String(result_trGetNextProductionStep.productionStepResultValues[0]), 10);
-            // *************trGetStationSetting**********
-            var result_trGetStationSetting = imsApiService.trGetStationSetting(
-                imsApiSessionContext,
-                stationNumber, // String
-                [ImsApiKey.PROCESS_LAYER, ImsApiKey.PART_NUMBER, ImsApiKey.WORKORDER_NUMBER]
-            );
-            if (result_trGetStationSetting.return_value !== 0) {
-                return generateError(result_trGetStationSetting.return_value, "trGetStationSetting");
-            }
-            var processLayer = Number(result_trGetStationSetting.stationSettingResultValues[0]);
-            /* eslint-disable no-magic-numbers */
-            var result_trUploadState = imsApiService.trUploadState(
-                imsApiSessionContext,
-                stationNumber,
-                processLayer,
-                serialNumber,
-                "-1",
-                3,
-                1,
-                loadTimeStamp,
-                0,
-                [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
-                []
-            );
-            /* eslint-enable no-magic-numbers */
-            if (result_trUploadState.return_value !== 0) {
-                return generateError(result_trUploadState.return_value, "trUploadState");
-            }
-            var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
-                imsApiSessionContext,
-                stationNumber,
-                0,
-                serialNumber,
-                "-1",
-                loadTimeStamp,
-                1,
-                [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE],
-                ["EINLAGER_DATUM", loadTimeStamp, 0]
-            );
-            if (result_attribAppendAttributeValues.return_value !== 0) {
-                return generateError(result_attribAppendAttributeValues.return_value, "attribAppendAttributeValues");
-            }
-        }
-        //Added append attribute start time to calculate the cycle time in cffcMachineOut
-        var objectType = 0;
-        var objectNumber = serialNumber;
-        var objectDetail = "-1";
-        var bookDate = loadTimeStamp;
-        var allowOverWrite = 1;
-        var attributeUploadKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
-        var attributeUploadValues = [0, "ANFANGSDATUM", loadTimeStamp];
+
+        var attributeUploadKeys = ["ATTRIBUTE_CODE", "ATTRIBUTE_VALUE"];
+        var attributeUploadValues = ["SLOT", position];
         var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
             imsApiSessionContext,
             stationNumber, // String
-            objectType, // int
-            objectNumber, // String
-            objectDetail, // String
-            bookDate, // long
-            allowOverWrite, // int
+            (objectType = 0), // int
+            (objectNumber = firstSnr), // String
+            (objectDetail = "-1"), // String
+            (bookDate = -1), // long
+            (allowOverWrite = 0), // int
             attributeUploadKeys, // String[]
             attributeUploadValues // String[]
         );
@@ -1126,6 +1074,25 @@ function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, load
         if (return_value != 0) {
             return generateError(return_value, "Fehler in MES API attribAppendAttributeValues");
         }
+        var attributeResultValues = result_attribAppendAttributeValues.attributeResultValues;
+
+        var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
+            imsApiSessionContext,
+            stationNumber,
+            0,
+            substractId,
+            "-1",
+            -1,
+            1,
+            [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE],
+            ["EINLAGER_DATUM", loadTimeStamp, 0]
+        );
+        var return_value = result_attribAppendAttributeValues.return_value;
+        if (return_value != 0) {
+            return generateError(return_value, "Fehler in MES API attribAppendAttributeValues");
+        }
+        return generateReturn(0, "");
+        //--------------------------------------------------------------------------------------------------
     } else {
         return generateReturn(0, "");
     }
@@ -2736,9 +2703,9 @@ function cffcSetupConfirmation(stationNumber, successful, partChamber) {
                 if (result_attribAppendAttributeValues.return_value !== 0) {
                     return generateReturn(-1002, "Fehlerhafte Daten an das MES übertragen");
                 }
-            }
 
-            return generateReturn(0, ""); // @Rouf to be validated
+                return generateReturn(0, ""); // @Ro uf to be validated
+            }
         }
 
         updateConfigForWayDecision(stationNumber, 1);
@@ -3240,144 +3207,81 @@ function cffcUnloadChamberConfirmation(stationNumber, serialNumber, position, un
             return generateReturn(-1001, "Ungültige Inputparameter");
         }
 
-        unloadTimeStamp = parseInt(unloadTimeStamp) * 1000;
+        //unloadTimeStamp = parseInt(unloadTimeStamp) * 1000;
+        //--------------------------------------------------------------------------------------------------
+        var substarctId = getSubstractIdFromSnr(serialNumber);
+        var firstSnr = getFirstSnrPosition(stationNumber, serialNumber);
 
-        var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
-            imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            unloadTimeStamp,
-            "TransitZoneLinie",
-            "-1",
-            // eslint-disable-next-line no-magic-numbers
-            89
-        ); // WA work order (TR booking)
-        if (result_mlSetMaterialBinLocation.return_value !== 0) {
-            return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
-        }
-
-        var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
-            imsApiSessionContext,
-            stationNumber,
-            [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
-
-            [0, "F", position],
-            [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
-
-            []
-        );
-
-        var errodCode = result_mlUpdateStorage.return_value;
-        if (errodCode !== 0) {
-            errodCode = result_mlUpdateStorage.storageUpdateResultValues[0];
-            return generateError(errodCode, "mlUpdateStorage");
-        }
-
-        var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-            imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            "-1",
-            [ImsApiKey.WORKORDER_NUMBER]
-        );
-        // WA work order (TR booking)
-        if (result_mlSetMaterialBinLocation.return_value !== 0) {
-            return generateError(result_trGetSerialNumberInfo.return_value, "trGetSerialNumberInfo");
-        }
-
-        var workorderNumber = String(result_trGetSerialNumberInfo.serialNumberResultValues[0]);
-
-        /* eslint-disable no-magic-numbers */
-        if (workorderNumber === "TEMP_SENSOREN") {
-            return generateReturn(20, "Kalibrierplatte muss entnommen werden");
-        }
-
-        var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-            imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            "-1",
-            0,
-            0,
-            1,
-            [ImsApiKey.WORKSTEP_AVO]
-        );
-        if (result_trGetNextProductionStep.return_value !== 0) {
-            return generateError(result_trGetNextProductionStep.return_value, "trGetSerialNumberUploadInfo");
-        }
-
-        var nextWorkstep = parseInt(String(result_trGetNextProductionStep.productionStepResultValues[0]), 10);
-
-        // *************trGetStationSetting**********
-        var result_trGetStationSetting = imsApiService.trGetStationSetting(
+        var attributeFilters = [new KeyValue("DATE_FROM", -1)];
+        var objectResultKeys = ["SERIAL_NUMBER"];
+        var result_attribGetObjectsForAttributeValues = imsApiService.attribGetObjectsForAttributeValues(
             imsApiSessionContext,
             stationNumber, // String
-            [ImsApiKey.PROCESS_LAYER, ImsApiKey.PART_NUMBER, ImsApiKey.WORKORDER_NUMBER]
+            (objectType = 0), // int
+            (attributeCode = "SLOT"), // String
+            (attributeValue = position), // String
+            (maxRows = -1), // int
+            attributeFilters, // KeyValue[]
+            objectResultKeys // String[]
         );
-
-        if (result_trGetStationSetting.return_value !== 0) {
-            return generateError(result_trGetStationSetting.return_value, "trGetStationSetting");
+        var return_value = result_attribGetObjectsForAttributeValues.return_value;
+        if (return_value != 0) {
+            return generateReturn(-1001, "Fehler in MES API Fehler in MES API");
         }
-        var processLayer = Number(result_trGetStationSetting.stationSettingResultValues[0]);
+        var objectResultValues = result_attribGetObjectsForAttributeValues.objectResultValues;
+        var foundSnr = objectResultValues[0];
+        if (foundSnr != firstSnr) {
+            return generateReturn(20, "Calibration plate has to be removed manually");
+        }
 
-        // TODO: some ambiguities in this implementation, verify with author
+        var removeSerialNumberFromCarrierKeys = ["ERROR_CODE", "SERIAL_NUMBER", "SERIAL_NUMBER_POS"];
+        var removeSerialNumberFromCarrierValues = [0, firstSnr, "-1"];
 
-        var result_trUploadState = imsApiService.trUploadState(
+        var result_equRemoveSerialNumberFromCarrier = imsApiService.equRemoveSerialNumberFromCarrier(
             imsApiSessionContext,
-            stationNumber,
-            processLayer,
-            serialNumber,
-            "-1",
-            3,
-            1,
-            unloadTimeStamp,
-            0,
-            [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
-            [0, String(serialNumber), 0]
+            stationNumber, // String
+            (equipmentNumber = stationNumber), // String
+            (equipmentIndex = 0), // String
+            removeSerialNumberFromCarrierKeys, // String[]
+            removeSerialNumberFromCarrierValues // String[]
         );
-        if (result_trUploadState.return_value !== 0) {
-            return generateError(result_trUploadState.return_value, "trUploadState");
+        var return_value = result_equRemoveSerialNumberFromCarrier.return_value;
+        if (return_value != 0) {
+            return generateReturn(-1001, "Fehler in MES API Fehler in MES API");
         }
-        /* eslint-enable no-magic-numbers */
+        var removeSerialNumberFromCarrierResultValues =
+            result_equRemoveSerialNumberFromCarrier.removeSerialNumberFromCarrierResultValues;
+
+        var result_attribRemoveAttributeValue = imsApiService.attribRemoveAttributeValue(
+            imsApiSessionContext,
+            stationNumber, // String
+            (objectType = 0), // int
+            (objectNumber = firstSnr), // String
+            (objectDetail = "-1"), // String
+            (attributeCode = "SLOT"), // String
+            (attributeValueKey = "-1") // String
+        );
+        var return_value = result_attribRemoveAttributeValue.return_value;
+        if (return_value != 0) {
+            return generateReturn(-1001, "Fehler in MES API Fehler in MES API");
+        }
 
         var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
             imsApiSessionContext,
             stationNumber,
             0,
-            serialNumber,
+            substarctId,
             "-1",
-            unloadTimeStamp,
+            -1,
             1,
             [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE],
-            ["EINLAGER_DATUM", "-1", 0]
-        );
-        if (result_attribAppendAttributeValues.return_value !== 0) {
-            return generateError(result_attribAppendAttributeValues.return_value, "attribAppendAttributeValues");
-        }
-
-        //Added append attribute end time to calculate the cycle time in cffcMachineOut
-        var objectType = 0;
-        var objectNumber = serialNumber;
-        var objectDetail = "-1";
-        var bookDate = unloadTimeStamp;
-        var allowOverWrite = 1;
-        var attributeUploadKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
-        var attributeUploadValues = [0, "ENDDATUM", unloadTimeStamp];
-        var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
-            imsApiSessionContext,
-            stationNumber, // String
-            objectType, // int
-            objectNumber, // String
-            objectDetail, // String
-            bookDate, // long
-            allowOverWrite, // int
-            attributeUploadKeys, // String[]
-            attributeUploadValues // String[]
+            ["ENTLADEN_DATUM", unloadTimeStamp, 0]
         );
         var return_value = result_attribAppendAttributeValues.return_value;
         if (return_value != 0) {
-            return generateError(return_value, "attribAppendAttributeValues");
+            return generateError(return_value, "Fehler in MES API attribAppendAttributeValues");
         }
+        //--------------------------------------------------------------------------------------------------
         return generateReturn(0, "");
     } else {
         return generateReturn(0, "");
