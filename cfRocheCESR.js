@@ -68,7 +68,7 @@ Change index:
     Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
     Radhoine Jmal           2020-10-12      Roche CESR      cffcSetupConfirmation       - Update cffcSetupConfirmation (Add config parameter)
     Radhoine Jmal           2020-10-12      Roche CESR      cffcCheckUser               - Update cffcCheckUser: Add unregister user without password
-    Radhoine Jmal           2020-10-12      Roche CESR      cffcCheckUser               - Add cfpStorageUnload
+    Radhoine Jmal           2020-10-12      Roche CESR      cfpStorageUnload               - Add cfpStorageUnload
 */
 
 /* eslint-disable no-undef*/
