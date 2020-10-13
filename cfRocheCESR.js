@@ -3596,7 +3596,7 @@ function cfpSetup(payLoad) {
  * @param {string} carrierNumber
  * @returns {Result_customFunctionCommon}
  */
-function cfpStorageUnload(stationNumber, slotId, carrierNumber) {
+function cfpStorageUnload(payLoad) {
   // TODO: implement after specification is ready
   if (!payLoad) {
     return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
