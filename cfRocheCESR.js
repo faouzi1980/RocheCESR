@@ -61,13 +61,14 @@ Change index:
                                                                                           to change the state of stataion(Not available)
                                                             cffcMachineOut              - Add ConfigGetValues API and configUpdateValues 
                                                                                           to change the state of stataion(Available)
-	  Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
+	Radhoine Jmal           2020-09-28      Roche CESR      cffcWayDecision             - Add ConfigGetValues API to identify plate direction     
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      configuration mode          - Add Config flag for individual function (prod / test:dummy)   
     Faouzi Ben Mabrouk      2020-10-08      Roche CESR      cfpParameterViolation       - Update cfpParameterViolation(payLoad) using payLoad
     Radhoine Jmal           2020-10-09      Roche CESR      cffcRequestCalibrationData  - Add cffcRequestCalibrationData
     Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
     Radhoine Jmal           2020-10-12      Roche CESR      cffcSetupConfirmation       - Update cffcSetupConfirmation (Add config parameter)
     Radhoine Jmal           2020-10-12      Roche CESR      cffcCheckUser               - Update cffcCheckUser: Add unregister user without password  
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcLoadChamberConfirmation - Refactor cffcLoadChamberConfirmation - Load PlateId into the slotID 
 */
 
 /* eslint-disable no-undef*/
@@ -1009,116 +1010,37 @@ function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, load
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "Ungültige Inputparameter");
         }
-        loadTimeStamp = parseInt(loadTimeStamp) * 1000;
-        var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
+        //loadTimeStamp = parseInt(loadTimeStamp) * 1000;
+
+        //--------------------------------------------------------------------------------------------------
+
+        var assignSerialNumberToCarrierKeys = ["ERROR_CODE", "SERIAL_NUMBER", "SERIAL_NUMBER_POS"];
+        var assignSerialNumberToCarrierValues = [0, serialNumber, "-1"];
+
+        var result_equAssignSerialNumberToCarrier = imsApiService.equAssignSerialNumberToCarrier(
             imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            loadTimeStamp,
-            position,
-            "-1",
-            // eslint-disable-next-line no-magic-numbers
-            89
-        ); // WA work order (TR booking)
-        if (result_mlSetMaterialBinLocation.return_value !== 0) {
-            return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
-        }
-        var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
-            imsApiSessionContext,
-            stationNumber,
-            [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
-            [0, "O", position],
-            [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
-            []
+            stationNumber, // String
+            (equipmentNumber = stationNumber), // String
+            (equipmentIndex = 0), // String
+            (setState = 0), // int
+            assignSerialNumberToCarrierKeys, // String[]
+            assignSerialNumberToCarrierValues // String[]
         );
-        if (result_mlUpdateStorage.return_value !== 0) {
-            return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
+        var return_value = result_equAssignSerialNumberToCarrier.return_value;
+        if (return_value != 0) {
+            return generateError(return_value, "Fehler in MES API equAssignSerialNumberToCarrier");
         }
-        var result_trGetSerialNumberInfo = imsApiService.trGetSerialNumberInfo(
-            imsApiSessionContext,
-            stationNumber,
-            serialNumber,
-            "-1",
-            [ImsApiKey.WORKORDER_NUMBER]
-        );
-        if (result_trGetSerialNumberInfo.return_value !== 0) {
-            return generateError(result_mlUpdateStorage.return_value, "result_trGetSerialNumberInfo");
-        }
-        var workorderNumber = String(result_trGetSerialNumberInfo.serialNumberResultValues[0]);
-        if (workorderNumber !== "TEMP_SENSOREN") {
-            var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
-                imsApiSessionContext,
-                stationNumber,
-                serialNumber,
-                "-1",
-                0,
-                0,
-                1,
-                [ImsApiKey.WORKSTEP_AVO]
-            );
-            if (result_trGetNextProductionStep.return_value !== 0) {
-                return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
-            }
-            var nextWorkstep = parseInt(String(result_trGetNextProductionStep.productionStepResultValues[0]), 10);
-            // *************trGetStationSetting**********
-            var result_trGetStationSetting = imsApiService.trGetStationSetting(
-                imsApiSessionContext,
-                stationNumber, // String
-                [ImsApiKey.PROCESS_LAYER, ImsApiKey.PART_NUMBER, ImsApiKey.WORKORDER_NUMBER]
-            );
-            if (result_trGetStationSetting.return_value !== 0) {
-                return generateError(result_trGetStationSetting.return_value, "trGetStationSetting");
-            }
-            var processLayer = Number(result_trGetStationSetting.stationSettingResultValues[0]);
-            /* eslint-disable no-magic-numbers */
-            var result_trUploadState = imsApiService.trUploadState(
-                imsApiSessionContext,
-                stationNumber,
-                processLayer,
-                serialNumber,
-                "-1",
-                3,
-                1,
-                loadTimeStamp,
-                0,
-                [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
-                []
-            );
-            /* eslint-enable no-magic-numbers */
-            if (result_trUploadState.return_value !== 0) {
-                return generateError(result_trUploadState.return_value, "trUploadState");
-            }
-            var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
-                imsApiSessionContext,
-                stationNumber,
-                0,
-                serialNumber,
-                "-1",
-                loadTimeStamp,
-                1,
-                [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE],
-                ["EINLAGER_DATUM", loadTimeStamp, 0]
-            );
-            if (result_attribAppendAttributeValues.return_value !== 0) {
-                return generateError(result_attribAppendAttributeValues.return_value, "attribAppendAttributeValues");
-            }
-        }
-        //Added append attribute start time to calculate the cycle time in cffcMachineOut
-        var objectType = 0;
-        var objectNumber = serialNumber;
-        var objectDetail = "-1";
-        var bookDate = loadTimeStamp;
-        var allowOverWrite = 1;
-        var attributeUploadKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
-        var attributeUploadValues = [0, "ANFANGSDATUM", loadTimeStamp];
+
+        var attributeUploadKeys = ["ATTRIBUTE_CODE", "ATTRIBUTE_VALUE"];
+        var attributeUploadValues = ["SLOT", position];
         var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
             imsApiSessionContext,
             stationNumber, // String
-            objectType, // int
-            objectNumber, // String
-            objectDetail, // String
-            bookDate, // long
-            allowOverWrite, // int
+            (objectType = 0), // int
+            (objectNumber = serialNumber), // String
+            (objectDetail = "-1"), // String
+            (bookDate = -1), // long
+            (allowOverWrite = 0), // int
             attributeUploadKeys, // String[]
             attributeUploadValues // String[]
         );
@@ -1126,6 +1048,25 @@ function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, load
         if (return_value != 0) {
             return generateError(return_value, "Fehler in MES API attribAppendAttributeValues");
         }
+        var attributeResultValues = result_attribAppendAttributeValues.attributeResultValues;
+
+        var result_attribAppendAttributeValues = imsApiService.attribAppendAttributeValues(
+            imsApiSessionContext,
+            stationNumber,
+            0,
+            serialNumber,
+            "-1",
+            -1,
+            1,
+            [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE],
+            ["EINLAGER_DATUM", loadTimeStamp, 0]
+        );
+        var return_value = result_attribAppendAttributeValues.return_value;
+        if (return_value != 0) {
+            return generateError(return_value, "Fehler in MES API attribAppendAttributeValues");
+        }
+        return generateReturn(0, "");
+        //--------------------------------------------------------------------------------------------------
     } else {
         return generateReturn(0, "");
     }
