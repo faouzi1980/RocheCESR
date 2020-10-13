@@ -97,8 +97,9 @@ importPackage(java.util);
 /* eslint-enable no-undef*/
 
 var APPTYPE = "Customer";
-var CLUSTER = "CESRDev";
-//var HOST = "itacnotebk451.itac.intra";
+var APPID = "Customer";
+var CLUSTER = "itacnotebk763test";
+//var CLUSTER = "CESRDev";
 
 var prod_cffcAllowOpen = true;
 var prod_cffcCameraOut = true;
@@ -679,6 +680,41 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
         return generateReturn(0, "", ["userID", "userGroup"]);
     }
 }
+function getParamValueFromStationConfigMap(stationNumber, parameterName, key) {
+    var result = null;
+
+    var configContext = [
+        new KeyValue("CONFIG_APPID", APPID),
+        new KeyValue("CONFIG_APPTYPE", APPTYPE),
+        new KeyValue("CONFIG_CLUSTER", CLUSTER),
+        new KeyValue("CONFIG_STATION", stationNumber)
+    ];
+    var parameterFilter = new Array(new KeyValue("PARAMETER_NAME", parameterName));
+    var parameterResultKeys = [];
+    var resultKeys = [ImsApiKey.CONFIG_KEY, ImsApiKey.CONFIG_VALUE];
+    var result_configGetValues = imsApiService.configGetValues(
+        imsApiSessionContext,
+        (options = []), // KeyValue[]
+        configContext, // KeyValue[]
+        parameterFilter, // KeyValue[]
+        parameterResultKeys, // String[]
+        resultKeys // String[]
+    );
+    var return_value = result_configGetValues.return_value;
+    if (return_value != 0) {
+        return result;
+    }
+    var resultValues = result_configGetValues.resultValues;
+
+    //logHandler.logMessage("#### len = " + resultValues.length);
+    for (var i = 0; i < resultValues.length / 2; i++) {
+        var key_ = resultValues[i * 2];
+        var val_ = resultValues[i * 2 + 1];
+        if (key_ == key) result = val_;
+    }
+
+    return result;
+}
 
 /**
  * @param {string} inputArg1 - stationNumber
@@ -770,90 +806,93 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
                 );
             }
 
-            var visionStation
-            // // * This section for the upload of the buffered measures on the PMU station
-            // //--------------------------------trGetStationSetting---------------------------------
-            // var stationSettingResultKeys = ["WORKORDER_NUMBER", "PROCESS_LAYER", "PART_NUMBER"];
-            // var result_trGetStationSetting = imsApiService.trGetStationSetting(
-            //     imsApiSessionContext,
-            //     stationNumber, // --> String
-            //     stationSettingResultKeys // --> String[]
-            // );
-            // var return_value = result_trGetStationSetting.return_value;
-            // if (return_value != 0) {
-            //     return generateReturn(-1002, "Fehler in MES API trGetStationSetting : " + return_value);
-            // }
-            // var stationSettingResultValues = result_trGetStationSetting.stationSettingResultValues;
-            // var workOrderNumber = stationSettingResultValues[0];
-            // var processLayer = stationSettingResultValues[1];
-            // var partNumber = stationSettingResultValues[2];
+            var PMU_Station = getParamValueFromStationConfigMap(stationNumber, "Customer.Laser.PmuStation", "PMU");
 
-            // //--------------------------------attribGetAttributeValues---------------------------------
-            // var objectType = 7;
-            // var objectNumber = stationNumber;
-            // var objectDetail = "-1";
-            // var attributeCodeArray = ["PMU_MEAS"];
-            // var allMergeLevel = 1;
-            // var attributeResultKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
-            // var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-            //     imsApiSessionContext,
-            //     stationNumber, // String
-            //     objectType, // int
-            //     objectNumber, // String
-            //     objectDetail, // String
-            //     attributeCodeArray, // String[]
-            //     allMergeLevel, // int
-            //     attributeResultKeys // String[]
-            // );
-            // var return_value = result_attribGetAttributeValues.return_value;
-            // if (return_value != 0) {
-            //     return generateReturn(-1002, "Fehler in MES API attribGetAttributeValues : " + return_value);
-            // }
-            // var attributeResultValues = result_attribGetAttributeValues.attributeResultValues;
-            // var measurementData = "" + attributeResultValues[2];
+            if (PMU_Station) {
+                // * This section for the upload of the buffered measures on the PMU station
+                //--------------------------------trGetStationSetting---------------------------------
+                var stationSettingResultKeys = ["WORKORDER_NUMBER", "PROCESS_LAYER", "PART_NUMBER"];
+                var result_trGetStationSetting = imsApiService.trGetStationSetting(
+                    imsApiSessionContext,
+                    PMU_Station, // --> String
+                    stationSettingResultKeys // --> String[]
+                );
+                var return_value = result_trGetStationSetting.return_value;
+                if (return_value != 0) {
+                    return generateReturn(-1002, "Fehler in MES API trGetStationSetting : " + return_value);
+                }
+                var stationSettingResultValues = result_trGetStationSetting.stationSettingResultValues;
+                var workOrderNumber = stationSettingResultValues[0];
+                var processLayer = stationSettingResultValues[1];
+                var partNumber = stationSettingResultValues[2];
 
-            // //--------------------------------trUploadResultDataAndRecipe---------------------------------
-            // var measureValues = [];
-            // if (!(measurementData == undefined || measurementData == null || measurementData == "")) {
-            //     var mv = measurementData.split("|");
+                //--------------------------------attribGetAttributeValues---------------------------------
+                var objectType = 7;
+                var objectNumber = stationNumber;
+                var objectDetail = "-1";
+                var attributeCodeArray = ["PMU_MEAS"];
+                var allMergeLevel = 1;
+                var attributeResultKeys = [ImsApiKey.ERROR_CODE, ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE];
+                var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+                    imsApiSessionContext,
+                    PMU_Station, // String
+                    objectType, // int
+                    objectNumber, // String
+                    objectDetail, // String
+                    attributeCodeArray, // String[]
+                    allMergeLevel, // int
+                    attributeResultKeys // String[]
+                );
+                var return_value = result_attribGetAttributeValues.return_value;
+                if (return_value != 0) {
+                    return generateReturn(-1002, "Fehler in MES API attribGetAttributeValues : " + return_value);
+                }
+                var attributeResultValues = result_attribGetAttributeValues.attributeResultValues;
+                var measurementData = "" + attributeResultValues[2];
 
-            //     for (var i = 0; i < mv.length; i = i + 2) {
-            //         measureValues.push("0", "0", "" + mv[i], "" + mv[i + 1]);
-            //     }
+                //--------------------------------trUploadResultDataAndRecipe---------------------------------
+                var measureValues = [];
+                if (!(measurementData == undefined || measurementData == null || measurementData == "")) {
+                    var mv = measurementData.split("|");
 
-            //     var stationNumber = stationNumber;
-            //     var processLayer = processLayer;
-            //     var recipeVersionId = "-1";
-            //     var serialNumberRef = serialNumberRef;
-            //     var serialNumberRefPos = "-1";
-            //     var serialNumberState = 0;
-            //     var duplicateSerialNumber = 1;
-            //     var bookDate = -1;
-            //     var cycleTime = 0;
-            //     var recipeVersionMode = "-1";
-            //     var resultUploadKeys = ["ERROR_CODE", "MEASURE_FAIL_CODE", "MEASURE_NAME", "MEASURE_VALUE"];
-            //     var resultUploadValues = measureValues;
+                    for (var i = 0; i < mv.length; i = i + 2) {
+                        measureValues.push("0", "0", "" + mv[i], "" + mv[i + 1]);
+                    }
 
-            //     var result_trUploadResultDataAndRecipe = imsApiService.trUploadResultDataAndRecipe(
-            //         imsApiSessionContext,
-            //         stationNumber, // String
-            //         processLayer, // int
-            //         recipeVersionId, // int
-            //         serialNumberRef, // String
-            //         serialNumberRefPos, // String
-            //         serialNumberState, // int
-            //         duplicateSerialNumber, // int
-            //         bookDate, // long
-            //         cycleTime, // float
-            //         recipeVersionMode, // int
-            //         resultUploadKeys, // String[]
-            //         resultUploadValues // String[]
-            //     );
-            //     var return_value = result_trUploadResultDataAndRecipe.return_value;
-            //     if (return_value != 0) {
-            //         return generateReturn(-1002, "Fehler in MES API trUploadResultDataAndRecipe : " + return_value);
-            //     }
-            // }
+                    var stationNumber = stationNumber;
+                    var processLayer = processLayer;
+                    var recipeVersionId = "-1";
+                    var serialNumberRef = serialNumberRef;
+                    var serialNumberRefPos = "-1";
+                    var serialNumberState = 0;
+                    var duplicateSerialNumber = 1;
+                    var bookDate = -1;
+                    var cycleTime = 0;
+                    var recipeVersionMode = "-1";
+                    var resultUploadKeys = ["ERROR_CODE", "MEASURE_FAIL_CODE", "MEASURE_NAME", "MEASURE_VALUE"];
+                    var resultUploadValues = measureValues;
+
+                    var result_trUploadResultDataAndRecipe = imsApiService.trUploadResultDataAndRecipe(
+                        imsApiSessionContext,
+                        PMU_Station, // String
+                        processLayer, // int
+                        recipeVersionId, // int
+                        serialNumberRef, // String
+                        serialNumberRefPos, // String
+                        serialNumberState, // int
+                        duplicateSerialNumber, // int
+                        bookDate, // long
+                        cycleTime, // float
+                        recipeVersionMode, // int
+                        resultUploadKeys, // String[]
+                        resultUploadValues // String[]
+                    );
+                    var return_value = result_trUploadResultDataAndRecipe.return_value;
+                    if (return_value != 0) {
+                        return generateReturn(-1002, "Fehler in MES API trUploadResultDataAndRecipe : " + return_value);
+                    }
+                }
+            }
             return generateReturn(0, "", serialNumbersOut);
         } catch (e) {
             // eslint-disable-next-line no-magic-numbers
@@ -2881,303 +2920,339 @@ function attribAppendAttribute(stationNumber, attributeCode, attribClassName, su
  */
 function cffcStorageLoad(stationNumber, carrierNumber) {
     if (prod_cffcStorageLoad) {
-      if (!carrierNumber || !stationNumber) {
-        // eslint-disable-next-line no-magic-numbers
-        return generateReturn(-1001, "Ungültige Inputparameter");
-      }
-      var lotNumber = carrierNumber;
-      var serialNumberResultKeys = [ImsApiKey.SERIAL_NUMBER];
-      var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
-        imsApiSessionContext,
-        stationNumber, // String
-        lotNumber, // String
-        serialNumberResultKeys // String[]
-      );
-      var return_value = result_shipGetSerialNumberDataForShippingLot.return_value;
-      if (return_value != 0) {
-        return generateError(result_shipGetSerialNumberDataForShippingLot.return_value, "shipGetSerialNumberDataForShippingLot");
-      }
-      var serialNumberList = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues;
-      if (serialNumberList.length == 0) {
-        return generateReturn(1, "Magazin ist nicht für diese Station vorgesehen");
-      }
-      var serialNumber = String(serialNumberList[0]);
-      var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(imsApiSessionContext, stationNumber, serialNumber, "-1", 0, 0, 0, [
-        ImsApiKey.STATION_NUMBER,
-      ]);
-      if (result_trGetNextProductionStep.return_value !== 0) {
-        return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
-      }
-      var nextStationNumber = String(result_trGetNextProductionStep.productionStepResultValues[0]);
-  
-      if (nextStationNumber !== stationNumber) {
-        return incorrectMagazine;
-      }
-  
-      var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
-        imsApiSessionContext,
-        stationNumber,
-        // eslint-disable-next-line no-magic-numbers
-        7,
-        stationNumber,
-        "-1",
-        ["LAGERORTE"],
-        0,
-        [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE]
-      );
-  
-      if (result_attribGetAttributeValues.return_value !== 0) {
-        return generateError(result_attribGetAttributeValues.return_value, "attribGetAttributeValues");
-      }
-  
-      var attributeLagerorte = String(result_attribGetAttributeValues.attributeResultValues[1]);
-  
-       var result_mlGetStorageData = imsApiService.mlGetStorageData(
-         imsApiSessionContext,
-         stationNumber,
-         [
-           new KeyValue(ImsApiKey.MAX_ROWS, "100"),
-           new KeyValue(ImsApiKey.STORAGE_CELL_STATE, "F"),
-           new KeyValue(ImsApiKey.STORAGE_NUMBER, attributeLagerorte),
-         ],
-  
-         [],
-         [],
-         [ImsApiKey.STORAGE_NUMBER],
-         []
-       );
-       if (result_mlGetStorageData.return_value !== 0) {
-         return generateError(result_mlGetStorageData.return_value, "mlGetStorageData");
-       }
-       var slotID = result_mlGetStorageData.storageResultValues.map(function (pos) {
-         return String(pos);
-       });
-  
-      var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
-        imsApiSessionContext,
-        stationNumber,
-        [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
-  
-        [0, "R", slotID],
-        [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
-  
-        []
-      );
-      if (result_mlUpdateStorage.return_value !== 0) {
-        return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
-      }
-      return generateReturn(0, "", [slotID]);
+        if (!carrierNumber || !stationNumber) {
+            // eslint-disable-next-line no-magic-numbers
+            return generateReturn(-1001, "Ungültige Inputparameter");
+        }
+        var lotNumber = carrierNumber;
+        var serialNumberResultKeys = [ImsApiKey.SERIAL_NUMBER];
+        var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
+            imsApiSessionContext,
+            stationNumber, // String
+            lotNumber, // String
+            serialNumberResultKeys // String[]
+        );
+        var return_value = result_shipGetSerialNumberDataForShippingLot.return_value;
+        if (return_value != 0) {
+            return generateError(
+                result_shipGetSerialNumberDataForShippingLot.return_value,
+                "shipGetSerialNumberDataForShippingLot"
+            );
+        }
+        var serialNumberList = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues;
+        if (serialNumberList.length == 0) {
+            return generateReturn(1, "Magazin ist nicht für diese Station vorgesehen");
+        }
+        var serialNumber = String(serialNumberList[0]);
+        var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
+            imsApiSessionContext,
+            stationNumber,
+            serialNumber,
+            "-1",
+            0,
+            0,
+            0,
+            [ImsApiKey.STATION_NUMBER]
+        );
+        if (result_trGetNextProductionStep.return_value !== 0) {
+            return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
+        }
+        var nextStationNumber = String(result_trGetNextProductionStep.productionStepResultValues[0]);
+
+        if (nextStationNumber !== stationNumber) {
+            return incorrectMagazine;
+        }
+
+        var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+            imsApiSessionContext,
+            stationNumber,
+            // eslint-disable-next-line no-magic-numbers
+            7,
+            stationNumber,
+            "-1",
+            ["LAGERORTE"],
+            0,
+            [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE]
+        );
+
+        if (result_attribGetAttributeValues.return_value !== 0) {
+            return generateError(result_attribGetAttributeValues.return_value, "attribGetAttributeValues");
+        }
+
+        var attributeLagerorte = String(result_attribGetAttributeValues.attributeResultValues[1]);
+
+        var result_mlGetStorageData = imsApiService.mlGetStorageData(
+            imsApiSessionContext,
+            stationNumber,
+            [
+                new KeyValue(ImsApiKey.MAX_ROWS, "100"),
+                new KeyValue(ImsApiKey.STORAGE_CELL_STATE, "F"),
+                new KeyValue(ImsApiKey.STORAGE_NUMBER, attributeLagerorte)
+            ],
+
+            [],
+            [],
+            [ImsApiKey.STORAGE_NUMBER],
+            []
+        );
+        if (result_mlGetStorageData.return_value !== 0) {
+            return generateError(result_mlGetStorageData.return_value, "mlGetStorageData");
+        }
+        var slotID = result_mlGetStorageData.storageResultValues.map(function (pos) {
+            return String(pos);
+        });
+
+        var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
+            imsApiSessionContext,
+            stationNumber,
+            [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
+
+            [0, "R", slotID],
+            [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
+
+            []
+        );
+        if (result_mlUpdateStorage.return_value !== 0) {
+            return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
+        }
+        return generateReturn(0, "", [slotID]);
     } else {
-      return generateReturn(0, "", [5]);
+        return generateReturn(0, "", [5]);
     }
-  }
-  
-  /**
-   * @param {string} stationNumber
-   * @param {string} magazineNumber
-   * @param {string} position
-   * @param {number} loadTimestamp
-   * @returns {Result_customFunctionCommon}
-   */
-  function cffcStorageLoadConfirmation(stationNumber, magazineNumber, position, loadTimestamp) {
+}
+
+/**
+ * @param {string} stationNumber
+ * @param {string} magazineNumber
+ * @param {string} position
+ * @param {number} loadTimestamp
+ * @returns {Result_customFunctionCommon}
+ */
+function cffcStorageLoadConfirmation(stationNumber, magazineNumber, position, loadTimestamp) {
     if (prod_cffcStorageLoadConfirmation) {
-      if (!magazineNumber || !stationNumber || !position || !loadTimestamp) {
-        // eslint-disable-next-line no-magic-numbers
-        return generateReturn(-1001, "Ungültige Inputparameter");
-      }
-      loadTimestamp = parseInt(loadTimestamp) * 1000;
-  
-      var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
-        imsApiSessionContext,
-        stationNumber,
-        magazineNumber,
-        loadTimestamp,
-        position,
-        "-1",
-        // eslint-disable-next-line no-magic-numbers
-        160
-      ); // Stock in store - positive correction
-      if (result_mlSetMaterialBinLocation.return_value !== 0) {
-        return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
-      }
-  
-      var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
-        imsApiSessionContext,
-        stationNumber,
-        [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
-  
-        [0, "O", position],
-        [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
-  
-        []
-      );
-      if (result_mlUpdateStorage.return_value !== 0) {
-        return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
-      }
-  
-      var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(imsApiSessionContext, stationNumber, magazineNumber, [
-        ImsApiKey.SERIAL_NUMBER,
-      ]);
-      if (result_shipGetSerialNumberDataForShippingLot.return_value !== 0) {
-        return generateError(result_shipGetSerialNumberDataForShippingLot.return_value, "shipGetSerialNumberDataForShippingLot");
-      }
-      var refSerialNumbers = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues.map(function (value) {
-        return String(value);
-      });
-  
-      // TODO: some ambiguities in this implementation, verify with author
-  
-      var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(imsApiSessionContext, stationNumber, refSerialNumbers[0], "-1", 0, 0, 1, [
-        ImsApiKey.WORKSTEP_AVO,
-      ]);
-      if (result_trGetNextProductionStep.return_value !== 0) {
-        return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
-      }
-  
-      var nextWorkstep = parseInt(String(result_trGetNextProductionStep.productionStepResultValues[0]), 10);
-  
-      for (var i = 0, maxLoopCounter1 = refSerialNumbers.length; i < maxLoopCounter1; i++) {
-        /* eslint-disable no-magic-numbers */
-       //Process Layaer set to 2 for testing purpose To be reviewed.
-       var result_trUploadState = imsApiService.trUploadState(
-          imsApiSessionContext,
-          stationNumber,
-          2,
-          refSerialNumbers[i],
-          "-1",
-          3,
-          1,
-          -1,
-          0,
-          [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
-          [0, refSerialNumbers[i], 3]
-        );
-        /* eslint-enable no-magic-numbers */
-        if (result_trUploadState.return_value !== 0) {
-          return generateError(result_trUploadState.return_value, "trUploadState");
+        if (!magazineNumber || !stationNumber || !position || !loadTimestamp) {
+            // eslint-disable-next-line no-magic-numbers
+            return generateReturn(-1001, "Ungültige Inputparameter");
         }
-      }
-      return generateReturn(0, "");
+        loadTimestamp = parseInt(loadTimestamp) * 1000;
+
+        var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
+            imsApiSessionContext,
+            stationNumber,
+            magazineNumber,
+            loadTimestamp,
+            position,
+            "-1",
+            // eslint-disable-next-line no-magic-numbers
+            160
+        ); // Stock in store - positive correction
+        if (result_mlSetMaterialBinLocation.return_value !== 0) {
+            return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
+        }
+
+        var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
+            imsApiSessionContext,
+            stationNumber,
+            [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
+
+            [0, "O", position],
+            [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
+
+            []
+        );
+        if (result_mlUpdateStorage.return_value !== 0) {
+            return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
+        }
+
+        var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
+            imsApiSessionContext,
+            stationNumber,
+            magazineNumber,
+            [ImsApiKey.SERIAL_NUMBER]
+        );
+        if (result_shipGetSerialNumberDataForShippingLot.return_value !== 0) {
+            return generateError(
+                result_shipGetSerialNumberDataForShippingLot.return_value,
+                "shipGetSerialNumberDataForShippingLot"
+            );
+        }
+        var refSerialNumbers = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues.map(function (
+            value
+        ) {
+            return String(value);
+        });
+
+        // TODO: some ambiguities in this implementation, verify with author
+
+        var result_trGetNextProductionStep = imsApiService.trGetNextProductionStep(
+            imsApiSessionContext,
+            stationNumber,
+            refSerialNumbers[0],
+            "-1",
+            0,
+            0,
+            1,
+            [ImsApiKey.WORKSTEP_AVO]
+        );
+        if (result_trGetNextProductionStep.return_value !== 0) {
+            return generateError(result_trGetNextProductionStep.return_value, "trGetNextProductionStep");
+        }
+
+        var nextWorkstep = parseInt(String(result_trGetNextProductionStep.productionStepResultValues[0]), 10);
+
+        for (var i = 0, maxLoopCounter1 = refSerialNumbers.length; i < maxLoopCounter1; i++) {
+            /* eslint-disable no-magic-numbers */
+            //Process Layaer set to 2 for testing purpose To be reviewed.
+            var result_trUploadState = imsApiService.trUploadState(
+                imsApiSessionContext,
+                stationNumber,
+                2,
+                refSerialNumbers[i],
+                "-1",
+                3,
+                1,
+                -1,
+                0,
+                [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
+                [0, refSerialNumbers[i], 3]
+            );
+            /* eslint-enable no-magic-numbers */
+            if (result_trUploadState.return_value !== 0) {
+                return generateError(result_trUploadState.return_value, "trUploadState");
+            }
+        }
+        return generateReturn(0, "");
     } else {
-      return generateReturn(0, "");
+        return generateReturn(0, "");
     }
-  }
-  
-  /**
-   * @param {string} stationNumber
-   * @param {string} magazineNumber
-   * @param {string} slotId
-   * @param {number} unloadTimestamp
-   * @returns {Result_customFunctionCommon}
-   */
-  function cffcStorageUnloadConfirmation(stationNumber, magazineNumber, slotId, unloadTimestamp) {
+}
+
+/**
+ * @param {string} stationNumber
+ * @param {string} magazineNumber
+ * @param {string} slotId
+ * @param {number} unloadTimestamp
+ * @returns {Result_customFunctionCommon}
+ */
+function cffcStorageUnloadConfirmation(stationNumber, magazineNumber, slotId, unloadTimestamp) {
     if (prod_cffcStorageUnloadConfirmation) {
-      var expectedNumberOfParams = 4;
-      try {
-        checkForNullAndPipes(arguments, expectedNumberOfParams);
-      } catch (e) {
-        // eslint-disable-next-line no-magic-numbers
-        return generateReturn(-1001, e.toString());
-      }
-  
-      if (!magazineNumber || !stationNumber || !slotId || !unloadTimestamp) {
-        // eslint-disable-next-line no-magic-numbers
-        return generateReturn(-1001, "Ungültige Inputparamete");
-      }
-  
-      unloadTimestamp = parseInt(unloadTimestamp) * 1000;
-  
-      var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
-        imsApiSessionContext,
-        stationNumber,
-        magazineNumber,
-        unloadTimestamp,
-        slotId,
-        "-1",
-        // eslint-disable-next-line no-magic-numbers
-        165
-      ); // Stock in store - negative correction
-      if (result_mlSetMaterialBinLocation.return_value !== 0) {
-        return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
-      }
-  
-      var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
-        imsApiSessionContext,
-        stationNumber,
-        [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
-  
-        [0, "F", slotId],
-        [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
-  
-        []
-      );
-  
-      var errodCode = result_mlUpdateStorage.return_value;
-      if (errodCode !== 0) {
-        errodCode = result_mlUpdateStorage.storageUpdateResultValues[0];
-        return generateError(errodCode, "mlUpdateStorage");
-      }
-      //Replacement to get the serial numbers
-      var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(imsApiSessionContext, stationNumber, magazineNumber, [
-        ImsApiKey.SERIAL_NUMBER,
-      ]);
-      if (result_shipGetSerialNumberDataForShippingLot.return_value !== 0) {
-        return generateError(result_shipGetSerialNumberDataForShippingLot.return_value, "shipGetSerialNumberDataForShippingLot");
-      }
-      var refSerialNumbers = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues.map(function (value) {
-        return String(value);
-      });
-     //var result_shipGetChildLotsForParentLot = imsApiService.shipGetChildLotsForParentLot(imsApiSessionContext, stationNumber, magazineNumber, [
-     //  ImsApiKey.MATERIAL_BIN_NUMBER,
-     //]);
-     //if (result_shipGetChildLotsForParentLot.return_value !== 0) {
-     //  return generateError(result_shipGetChildLotsForParentLot.return_value, "shipGetChildLotsForParentLot");
-     //}
-     //
-     //var refSerialNumbers = result_shipGetChildLotsForParentLot.childLotResultValues.map(function (value) {
-     //  return String(value);
-     //});
-  
-      for (var i = 0, maxLoopCounter1 = refSerialNumbers.length; i < maxLoopCounter1; i++) {
-        var result_trGetSerialNumberUploadInfo = imsApiService.trGetSerialNumberUploadInfo(
-          imsApiSessionContext,
-          stationNumber,
-          -1,
-          refSerialNumbers[i],
-          "-1",
-          0,
-          [ImsApiKey.PROCESS_LAYER]
-        );
-        if (result_trGetSerialNumberUploadInfo.return_value !== 0) {
-          return generateError(result_trGetSerialNumberUploadInfo.return_value, "trGetSerialNumberUploadInfo");
+        var expectedNumberOfParams = 4;
+        try {
+            checkForNullAndPipes(arguments, expectedNumberOfParams);
+        } catch (e) {
+            // eslint-disable-next-line no-magic-numbers
+            return generateReturn(-1001, e.toString());
         }
-  
-        var currentProcessLayer = parseInt(String(result_trGetSerialNumberUploadInfo.uploadInfoResultValues[0]), 10);
-  
-        /* eslint-disable no-magic-numbers */
-        var result_trUploadState = imsApiService.trUploadState(
-          imsApiSessionContext,
-          stationNumber,
-          currentProcessLayer,
-          refSerialNumbers[i],
-          "-1",
-          0,
-          1,
-          -1,
-          0,
-          [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
-          [0, refSerialNumbers[i], 0]
-        );
-        /* eslint-enable no-magic-numbers */
-        if (result_trUploadState.return_value !== 0) {
-          return generateError(result_trUploadState.return_value, "trUploadState");
+
+        if (!magazineNumber || !stationNumber || !slotId || !unloadTimestamp) {
+            // eslint-disable-next-line no-magic-numbers
+            return generateReturn(-1001, "Ungültige Inputparamete");
         }
-      }
-      return generateReturn(0, "");
+
+        unloadTimestamp = parseInt(unloadTimestamp) * 1000;
+
+        var result_mlSetMaterialBinLocation = imsApiService.mlSetMaterialBinLocation(
+            imsApiSessionContext,
+            stationNumber,
+            magazineNumber,
+            unloadTimestamp,
+            slotId,
+            "-1",
+            // eslint-disable-next-line no-magic-numbers
+            165
+        ); // Stock in store - negative correction
+        if (result_mlSetMaterialBinLocation.return_value !== 0) {
+            return generateError(result_mlSetMaterialBinLocation.return_value, "mlSetMaterialBinLocation");
+        }
+
+        var result_mlUpdateStorage = imsApiService.mlUpdateStorage(
+            imsApiSessionContext,
+            stationNumber,
+            [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
+
+            [0, "F", slotId],
+            [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
+
+            []
+        );
+
+        var errodCode = result_mlUpdateStorage.return_value;
+        if (errodCode !== 0) {
+            errodCode = result_mlUpdateStorage.storageUpdateResultValues[0];
+            return generateError(errodCode, "mlUpdateStorage");
+        }
+        //Replacement to get the serial numbers
+        var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
+            imsApiSessionContext,
+            stationNumber,
+            magazineNumber,
+            [ImsApiKey.SERIAL_NUMBER]
+        );
+        if (result_shipGetSerialNumberDataForShippingLot.return_value !== 0) {
+            return generateError(
+                result_shipGetSerialNumberDataForShippingLot.return_value,
+                "shipGetSerialNumberDataForShippingLot"
+            );
+        }
+        var refSerialNumbers = result_shipGetSerialNumberDataForShippingLot.serialNumberResultValues.map(function (
+            value
+        ) {
+            return String(value);
+        });
+        //var result_shipGetChildLotsForParentLot = imsApiService.shipGetChildLotsForParentLot(imsApiSessionContext, stationNumber, magazineNumber, [
+        //  ImsApiKey.MATERIAL_BIN_NUMBER,
+        //]);
+        //if (result_shipGetChildLotsForParentLot.return_value !== 0) {
+        //  return generateError(result_shipGetChildLotsForParentLot.return_value, "shipGetChildLotsForParentLot");
+        //}
+        //
+        //var refSerialNumbers = result_shipGetChildLotsForParentLot.childLotResultValues.map(function (value) {
+        //  return String(value);
+        //});
+
+        for (var i = 0, maxLoopCounter1 = refSerialNumbers.length; i < maxLoopCounter1; i++) {
+            var result_trGetSerialNumberUploadInfo = imsApiService.trGetSerialNumberUploadInfo(
+                imsApiSessionContext,
+                stationNumber,
+                -1,
+                refSerialNumbers[i],
+                "-1",
+                0,
+                [ImsApiKey.PROCESS_LAYER]
+            );
+            if (result_trGetSerialNumberUploadInfo.return_value !== 0) {
+                return generateError(result_trGetSerialNumberUploadInfo.return_value, "trGetSerialNumberUploadInfo");
+            }
+
+            var currentProcessLayer = parseInt(
+                String(result_trGetSerialNumberUploadInfo.uploadInfoResultValues[0]),
+                10
+            );
+
+            /* eslint-disable no-magic-numbers */
+            var result_trUploadState = imsApiService.trUploadState(
+                imsApiSessionContext,
+                stationNumber,
+                currentProcessLayer,
+                refSerialNumbers[i],
+                "-1",
+                0,
+                1,
+                -1,
+                0,
+                [ImsApiKey.ERROR_CODE, ImsApiKey.SERIAL_NUMBER, ImsApiKey.SERIAL_NUMBER_STATE],
+                [0, refSerialNumbers[i], 0]
+            );
+            /* eslint-enable no-magic-numbers */
+            if (result_trUploadState.return_value !== 0) {
+                return generateError(result_trUploadState.return_value, "trUploadState");
+            }
+        }
+        return generateReturn(0, "");
     } else {
-      return generateReturn(0, "");
+        return generateReturn(0, "");
     }
-  }
+}
 
 /**
  * @param {string} stationNumber
@@ -3372,12 +3447,9 @@ function cffcUploadMachineConditionOrMessages(
 function cfffUploadProcessData() {
     if (prod_cfffUploadProcessData) {
         var inArgs = [].slice.call(arguments);
-        logHandler.logMessage("+++++++++");
-        logHandler.logMessage(inArgs);
         var stationNumber = inArgs[0];
         var data = inArgs.slice(1, inArgs.length);
-        logHandler.logMessage("+++++++++");
-        logHandler.logMessage(data);
+
         if (!stationNumber) {
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
