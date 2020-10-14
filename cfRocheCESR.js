@@ -2990,7 +2990,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
             stationNumber,
             [
                 new KeyValue(ImsApiKey.MAX_ROWS, "100"),
-                new KeyValue(ImsApiKey.STORAGE_CELL_STATE, "F"),
+                new KeyValue(ImsApiKey.STORAGE_STATE, "F"),
                 new KeyValue(ImsApiKey.STORAGE_GROUP_NUMBER, attributeLagerorte)
             ],
 
