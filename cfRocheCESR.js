@@ -76,7 +76,7 @@ Change index:
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoadConfirmation  - Update cffcStorageLoadConfirmation (unloadTimestamp)
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cffcPing                    - Update to use dynamic topic
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cfpSetup                    - Update cfpSetup (JSON parsing)
-
+    Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoadConfirmation  - change mlGetStorageData: add imsAPi: STORAGE_GROUP_NUMBER
 */
 
 /* eslint-disable no-undef*/
@@ -2927,6 +2927,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "Ungültige Inputparameter");
         }
+        var incorrectMagazine = generateReturn(-1, "Magazin ist nicht für diese Station vorgesehen"); 
         var lotNumber = carrierNumber;
         var serialNumberResultKeys = [ImsApiKey.SERIAL_NUMBER];
         var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
@@ -2989,8 +2990,8 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
             stationNumber,
             [
                 new KeyValue(ImsApiKey.MAX_ROWS, "100"),
-                new KeyValue(ImsApiKey.STORAGE_CELL_STATE, "F"),
-                new KeyValue(ImsApiKey.STORAGE_NUMBER, attributeLagerorte)
+                new KeyValue(ImsApiKey.STORAGE_STATE, "F"),
+                new KeyValue(ImsApiKey.STORAGE_GROUP_NUMBER, attributeLagerorte)
             ],
 
             [],
@@ -3010,7 +3011,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
             stationNumber,
             [ImsApiKey.ERROR_CODE, ImsApiKey.STORAGE_STATE, ImsApiKey.STORAGE_NUMBER],
 
-            [0, "R", slotID],
+            [0, "R", slotID[0]],
             [ImsApiKey.ERROR_CODE, ImsApiKey.REFERENCE],
 
             []
@@ -3018,7 +3019,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
         if (result_mlUpdateStorage.return_value !== 0) {
             return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
         }
-        return generateReturn(0, "", [slotID]);
+        return generateReturn(0, "", [slotID[0]]);
     } else {
         return generateReturn(0, "", [5]);
     }
