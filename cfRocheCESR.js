@@ -75,6 +75,8 @@ Change index:
     Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber         - Add configuration function to get param from station config
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoadConfirmation  - Update cffcStorageLoadConfirmation (unloadTimestamp)
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cffcPing                    - Update to use dynamic topic
+    Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cfpSetup                    - Update cfpSetup (JSON parsing)
+
 */
 
 /* eslint-disable no-undef*/
