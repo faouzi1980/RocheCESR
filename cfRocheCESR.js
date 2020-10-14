@@ -725,7 +725,6 @@ function getParamValueFromStationConfigMap(stationNumber, parameterName, key) {
  */
 function cffcGetSerialNumber(inputArg1, inputArg2) {
     if (prod_cffcGetSerialNumber) {
-        // // TODO: implement after specification is ready
         var expectedNumberOfParams = 2;
         try {
             checkForNullAndPipes(arguments, expectedNumberOfParams);
@@ -3747,6 +3746,9 @@ function cffcPing(topic, callID) {
 }
 
 /**
+ * @function cfpParameterViolation
+ * @since 1.0.0
+ * @author Faouzi Ben Mabrouk
  * @param {string} inputArg1 - stationNumber
  * @param {string} inputArg2 - violationMessage
  * @returns {Result_customFunctionCommon}
@@ -3797,10 +3799,13 @@ function cfpSelectMagazine(stationNumber, magazineNumber, position) {
  *
  * @function cfpSetup
  * @author Sami Akkari
+ * @since 9.50.00
+ * @version 1.0
  *
  * @param {string} payLoad - JSON containing all data
  *
  * @returns {Result_customFunctionCommon}
+ * @throws
  */
 function cfpSetup(payLoad) {
     if (!payLoad) {
@@ -3808,7 +3813,6 @@ function cfpSetup(payLoad) {
     }
 
     var payLoadData;
-
     try {
         payLoadData = JSON.parse(payLoad);
     } catch (e) {
@@ -3818,8 +3822,6 @@ function cfpSetup(payLoad) {
     //Collectall the keys in the JSON
     var keys = [];
     for (var k in payLoadData) keys.push(k);
-    logHandler.logMessage("List of Keys *****: ");
-    logHandler.logMessage(keys);
 
     //Apply checks on JSON key/value
     var results = [];
@@ -3827,10 +3829,8 @@ function cfpSetup(payLoad) {
         if (!payLoadData[keys[i]]) {
             return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
         }
-        results.push(payLoadData[keys[i]]);
+        results.push(JSON.stringify(payLoadData[keys[i]]).replace('"', "")); //to be checked
     }
-    logHandler.logMessage("List of results ******: ");
-    logHandler.logMessage(results);
 
     return generateReturn(0, "", results);
 }

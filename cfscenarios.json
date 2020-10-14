@@ -1,17 +1,43 @@
 {
     "project": "project name",
     "description": "",
-  
-    "default": {
+    "defaultx": {
         "scenario": "3.1.0",
         "name": "Setup Check - Setup OK - The setup is activated for the right part number in iTAC.",
-        "method": "cffcCheckUser",
+        "method": "cffcUnloadChamberConfirmation",
         "args": [
             "01010010",
-            "",
-            "admin",
-            "admin",
-            1
+            "001WO-01-TE00021",
+            "106_10",
+            "1602546179999"
+        ]
+    },
+    "defaulty": {
+        "scenario": "3.1.0",
+        "name": "Setup Check - Setup OK - The setup is activated for the right part number in iTAC.",
+        "method": "cffcLoadChamberConfirmation",
+        "args": [
+            "01010010",
+            "001WO-01-TE00021",
+            "106_10",
+            "1602546172020"
+        ]
+    },
+    "defaultw": {
+        "scenario": "3.1.0",
+        "name": "Setup Check - Setup OK - The setup is activated for the right part number in iTAC.",
+        "method": "cffcGetSerialNumber",
+        "args": [
+            "01010010",
+            "5"
+        ]
+    },
+    "default": {
+        "scenario": "3.1.0",
+        "name": "",
+        "method": "cfpSetup",
+        "args": [
+            "{\"hello\":\"value\",\"hello2\":\"value2\",\"obj\":{\"name1\":\"val1\",\"name2\":\"val2\"}}"
         ]
     },
     "scenarios": []
