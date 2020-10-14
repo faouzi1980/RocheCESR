@@ -3019,7 +3019,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
         if (result_mlUpdateStorage.return_value !== 0) {
             return generateError(result_mlUpdateStorage.return_value, "mlUpdateStorage");
         }
-        return generateReturn(0, "", [slotID]);
+        return generateReturn(0, "", [slotID[0]]);
     } else {
         return generateReturn(0, "", [5]);
     }
