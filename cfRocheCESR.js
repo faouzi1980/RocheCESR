@@ -74,6 +74,7 @@ Change index:
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoad             - (By Aziz) Update cffcStorageLoad / cffcStorageLoadConfirmation / cffcStorageUnloadConfirmation
     Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber         - Add configuration function to get param from station config
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoadConfirmation  - Update cffcStorageLoadConfirmation (unloadTimestamp)
+    Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cffcPing                    - Update to use dynamic topic
 */
 
 /* eslint-disable no-undef*/
@@ -3728,19 +3729,18 @@ function cfpEcho(reportedCallId) {
  * @function cffcPing
  * @author Sami Akkari
  *
- * @param {string} stationNumber
+ * @param {string} topic
  * @param {number} callID
  *
  * @returns {Result_customFunctionCommon}
  */
-function cffcPing(stationNumber, callID) {
-    var topic = "KLS106/cfpEcho";
-    //topic += stationNumber;
-
+function cffcPing(topic, callID) {
     // msgPublish
     var result_msgPublish = imsApiService.msgPublish(imsApiSessionContext, topic, callID);
-    if (result_msgPublish.return_value !== 0) {
-        return generateReturn(result_msgPublish.return_value, "Fehler in MES API msgPublish");
+    var return_value = result_msgPublish.return_value;
+
+    if (return_value !== 0) {
+        return generateReturn(return_value, "Fehler in MES API msgPublish");
     }
 
     return generateReturn(0, "", [callID]);
