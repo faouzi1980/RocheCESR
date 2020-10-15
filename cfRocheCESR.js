@@ -1043,13 +1043,14 @@ function cffcIEOut(inputArg1, inputArg2, inputArg3, inputArg4, inputArg5, inputA
 
 function getSubstractIdFromSnr(snr) {
     var ref = snr;
+    return snr;
     ref = "001" + ref.slice(3);
     return ref;
 }
 
 function getFirstSnrPosition(stationNumber, snr) {
     var first;
-
+    return snr;
     var result_trGetSerialNumberBySerialNumberRef = imsApiService.trGetSerialNumberBySerialNumberRef(
         imsApiSessionContext,
         stationNumber, // String
@@ -1067,10 +1068,15 @@ function getFirstSnrPosition(stationNumber, snr) {
 }
 
 /**
+ * @author Faouzi Ben Mabrouk
+ * @since 9.50.00
+ * @version 1.0
+ *
  * @param {string} stationNumber
  * @param {string} serialNumber
  * @param {string} position
  * @param {number} loadTimeStamp
+ *
  * @returns {Result_customFunctionCommon}
  */
 function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, loadTimeStamp) {
@@ -2927,7 +2933,7 @@ function cffcStorageLoad(stationNumber, carrierNumber) {
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "Ungültige Inputparameter");
         }
-        var incorrectMagazine = generateReturn(-1, "Magazin ist nicht für diese Station vorgesehen"); 
+        var incorrectMagazine = generateReturn(-1, "Magazin ist nicht für diese Station vorgesehen");
         var lotNumber = carrierNumber;
         var serialNumberResultKeys = [ImsApiKey.SERIAL_NUMBER];
         var result_shipGetSerialNumberDataForShippingLot = imsApiService.shipGetSerialNumberDataForShippingLot(
@@ -3801,14 +3807,14 @@ function cfpSelectMagazine(stationNumber, magazineNumber, position) {
  * Custom function cfpSetup
  *
  * @function cfpSetup
- * @author Sami Akkari
- * @since 9.50.00
- * @version 1.0
+ * @author   Sami Akkari
+ * @since    9.50.00
+ * @version  1.2
  *
- * @param {string} payLoad - JSON containing all data
+ * @param {string} payLoad -  JSON string containing all data
  *
  * @returns {Result_customFunctionCommon}
- * @throws
+ * @throws -1001 - Fehlerhafte Daten an das MES übertragen
  */
 function cfpSetup(payLoad) {
     if (!payLoad) {
@@ -3832,7 +3838,7 @@ function cfpSetup(payLoad) {
         if (!payLoadData[keys[i]]) {
             return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
         }
-        results.push(JSON.stringify(payLoadData[keys[i]]).replace('"', "")); //to be checked
+        results.push(JSON.stringify(payLoadData[keys[i]]).replace("", "")); //to be checked
     }
 
     return generateReturn(0, "", results);
