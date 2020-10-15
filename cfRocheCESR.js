@@ -655,9 +655,11 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             userName = userInfo.split("|")[0];
             password = userInfo.split("|")[1];
             tokenID = userInfo.split("|")[2];
-            if (tokenID != "null") {
+            if (tokenID != "null" || !tokenID) {
                 userName = "";
                 password = tokenID;
+            } else {
+                tokenID = "";
             }
             //--------------------regUnregisterUser--------------------
             var result_regUnregisterUser = imsApiService.regUnregisterUser(
@@ -3882,7 +3884,7 @@ function cfpSelectMagazine(stationNumber, magazineNumber, position) {
  * @function cfpSetup
  * @author   Sami Akkari
  * @since    9.50.00
- * @version  1.2
+ * @version  1.3
  *
  * @param {string} payLoad -  JSON string containing all data
  *
