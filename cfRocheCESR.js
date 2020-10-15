@@ -497,6 +497,7 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             return generateReturn(-1001, "invalid input");
         }
         if (!tokenID) {
+            tokenID = null;
             if (userId && password) {
                 //-----------mdataGetUserGroupData
                 var mdataGetUserGroupDataFilter = new Array(new KeyValue("USER_NAME", userId));
@@ -655,11 +656,9 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             userName = userInfo.split("|")[0];
             password = userInfo.split("|")[1];
             tokenID = userInfo.split("|")[2];
-            if (tokenID != "null" || !tokenID) {
+            if (tokenID != "null") {
                 userName = "";
                 password = tokenID;
-            } else {
-                tokenID = "";
             }
             //--------------------regUnregisterUser--------------------
             var result_regUnregisterUser = imsApiService.regUnregisterUser(
