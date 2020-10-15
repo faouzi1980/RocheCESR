@@ -3911,7 +3911,8 @@ function cfpSetup(payLoad) {
         if (!payLoadData[keys[i]]) {
             return generateReturn(-1001, "Fehlerhafte Daten an das MES übertragen");
         }
-        results.push(JSON.stringify(payLoadData[keys[i]]).replace("", "")); //to be checked
+        //results.push(parseInt(JSON.stringify(payLoadData[keys[i]]).replace("\"", ""))); //to be checked
+        results.push(parseInt(JSON.stringify(payLoadData[keys[i]]).replace('"', ""))); //to be checked
     }
 
     return generateReturn(0, "", results);
