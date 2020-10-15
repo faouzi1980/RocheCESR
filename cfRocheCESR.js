@@ -68,8 +68,8 @@ Change index:
     Radhoine Jmal           2020-10-09      Roche CESR      cffcStorageLoad             - Add cffcStorageLoad
     Radhoine Jmal           2020-10-12      Roche CESR      cffcSetupConfirmation       - Update cffcSetupConfirmation (Add config parameter)
     Radhoine Jmal           2020-10-12      Roche CESR      cffcCheckUser               - Update cffcCheckUser: Add unregister user without password  
-    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcLoadChamberConfirmation - Refactor cffcLoadChamberConfirmation - Load PlateId into the slotID 
-    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcUnloadChamberConfirmation   - Refactor cffcUnloadChamberConfirmation - Unload PlateId from the slotID 
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcLoadChamberConfirmation - Refactor cffcLoadChamberConfirmation v2.0 - Load PlateId into the slotID 
+    Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcUnloadChamberConfirmation   - Refactor cffcUnloadChamberConfirmation v2.0 - Unload PlateId from the slotID 
     Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber	        - Update cffcGetSerialNumber to manage substructID.
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoad             - (By Aziz) Update cffcStorageLoad / cffcStorageLoadConfirmation / cffcStorageUnloadConfirmation
     Faouzi Ben Mabrouk      2020-10-13      Roche CESR      cffcGetSerialNumber         - Add configuration function to get param from station config
@@ -105,6 +105,10 @@ var APPID = "Customer";
 var CLUSTER = "itacnotebk763test";
 //var CLUSTER = "CESRDev";
 
+// Error codes
+var ERROR_INVALID_INPUT = -1001;
+
+// general config
 var prod_cffcAllowOpen = true;
 var prod_cffcCameraOut = true;
 var prod_cffcCheckUser = true;
@@ -721,9 +725,31 @@ function getParamValueFromStationConfigMap(stationNumber, parameterName, key) {
 }
 
 /**
+ * This function call is used to provide serial numbers IDs for the engraving process.
+ * The return result will be an array which contain the ref serial number (snr pos 0) in the
+ * firs position and remain posions will contain the sub serial numbers starting from snr position 1.
+ *
+ * This function was designed since v2.0 to manage the serial number generation based only
+ * on the product workorder folowing the ID template defined by the customer.
+ *
+ * To fit the customer requirement the reference serial number ID and shild serial number ID must
+ * follow the logic provided in the specification
+ *
+ * ref id:  001 [8 digits workorder #][5 digits incremental number 00001..99999]
+ * sub id:  002 [8 digits workorder #][5 digits incremental number 00001..99999]
+ *
+ * In order to have a good visual identification the same incremental number is used for the
+ * ref position as well as for the first sub position /!\
+ *
+ * @function cffcGetSerialNumber
+ * @since 9.50.00
+ * @version 2.0
+ *
  * @param {string} inputArg1 - stationNumber
  * @param {string} inputArg2 - amount
  * @returns {Result_customFunctionCommon}
+ * @throws 0    Suceess
+ * @throws -1001    Invalid input
  */
 function cffcGetSerialNumber(inputArg1, inputArg2) {
     if (prod_cffcGetSerialNumber) {
@@ -735,7 +761,7 @@ function cffcGetSerialNumber(inputArg1, inputArg2) {
 
             if (!stationNumber || !amount) {
                 // eslint-disable-next-line no-magic-numbers
-                return generateReturn(-1001, "invalid input");
+                return generateReturn(ERROR_INVALID_INPUT, "invalid input");
             }
 
             var serialNumbersOut = [];
@@ -1068,9 +1094,27 @@ function getFirstSnrPosition(stationNumber, snr) {
 }
 
 /**
+ * This custom function script is handling the loading process od serial number in the KLS chamber
+ * The first version was created by Oliver and starting from version 2.0 it's new logic integrated
+ * using carrier ID for storing process and SLOT id as serrial number unique attribute to handle
+ * the serial number storage position inside the magazine. The SLOT attribute is removed using the
+ * cffcUnloadChamberConfirmation once the right serial number is unloaded from the provided Slot ID.
+ *
+ * The loading process is setting up the loadTimeStamp attribute with the loading time.
+ *
+ * To fit the customer requirement the reference serial number ID and shild serial number ID must
+ * follow the logic provided in the specification
+ *
+ * ref id:  001 [8 digits workorder #][5 digits incremental number 00001..99999]
+ * sub id:  002 [8 digits workorder #][5 digits incremental number 00001..99999]
+ *
+ * In order to have a good visual identification the same incremental number is used for the
+ * ref position as well as for the first sub position /!\
+ *
+ * @function cffcLoadChamberConfirmation
  * @author Faouzi Ben Mabrouk
  * @since 9.50.00
- * @version 1.0
+ * @version 2.0
  *
  * @param {string} stationNumber
  * @param {string} serialNumber
@@ -1078,12 +1122,15 @@ function getFirstSnrPosition(stationNumber, snr) {
  * @param {number} loadTimeStamp
  *
  * @returns {Result_customFunctionCommon}
+ * @throws 0        Success
+ * @throws -1001    Invalid input
+ *
  */
 function cffcLoadChamberConfirmation(stationNumber, serialNumber, position, loadTimeStamp) {
     if (prod_cffcLoadChamberConfirmation) {
         if (!serialNumber || !stationNumber || !position || !loadTimeStamp) {
             // eslint-disable-next-line no-magic-numbers
-            return generateReturn(-1001, "Ungültige Inputparameter");
+            return generateReturn(ERROR_INVALID_INPUT, "Ungültige Inputparameter");
         }
         //loadTimeStamp = parseInt(loadTimeStamp) * 1000;
 
@@ -3265,11 +3312,37 @@ function cffcStorageUnloadConfirmation(stationNumber, magazineNumber, slotId, un
 }
 
 /**
+ * This custom function script is handling the unloading process of serial number in the KLS chamber
+ * The first version was created by Oliver and starting from version 2.0 it's new logic integrated
+ * using carrier ID for storing process and SLOT id as serrial number unique attribute to handle
+ * the serial number storage position inside the magazine. The SLOT attribute is removed using the
+ * cffcUnloadChamberConfirmation once the right serial number is unloaded from the provided Slot ID.
+ *
+ * The unloading process is setting up the unloadTimeStamp attribute with the unloading time.
+ *
+ * To fit the customer requirement the reference serial number ID and shild serial number ID must
+ * follow the logic provided in the specification
+ *
+ * ref id:  001 [8 digits workorder #][5 digits incremental number 00001..99999]
+ * sub id:  002 [8 digits workorder #][5 digits incremental number 00001..99999]
+ *
+ * In order to have a good visual identification the same incremental number is used for the
+ * ref position as well as for the first sub position /!\
+ *
+ * @function cffcUnloadChamberConfirmation
+ * @author Faouzi Ben Mabrouk
+ * @since 9.50.00
+ * @version 2.0
+ *
  * @param {string} stationNumber
  * @param {string} serialNumber
- * @param {number} position
- * @param {number} unloadTimeStamp
+ * @param {string} position
+ * @param {number} loadTimeStamp
+ *
  * @returns {Result_customFunctionCommon}
+ * @throws 0        Success
+ * @throws -1001    Invalid input
+ *
  */
 function cffcUnloadChamberConfirmation(stationNumber, serialNumber, position, unloadTimeStamp) {
     if (prod_cffcUnloadChamberConfirmation) {
