@@ -77,6 +77,7 @@ Change index:
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cffcPing                    - Update to use dynamic topic
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cfpSetup                    - Update cfpSetup (JSON parsing)
     Radhoine Jmal           2020-10-13      Roche CESR      cffcStorageLoadConfirmation  - change mlGetStorageData: add imsAPi: STORAGE_GROUP_NUMBER
+    Radhoine Jmal           2020-10-13      Roche CESR      cffcCheckUser                - Update cffcCheckUser: tokenID = null
 */
 
 /* eslint-disable no-undef*/
