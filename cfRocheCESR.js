@@ -77,7 +77,7 @@ Change index:
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cffcPing                    - Update to use dynamic topic
     Faouzi Ben Mabrouk      2020-10-14      Roche CESR      cfpSetup                    - Update cfpSetup (JSON parsing)
     Radhoine Jmal           2020-10-14      Roche CESR      cffcStorageLoadConfirmation  - change mlGetStorageData: add imsAPi: STORAGE_GROUP_NUMBER
-    Radhoine Jmal           2020-10-15      Roche CESR      cffcCheckUser                - Update cffcCheckUser: tokenID = null
+    Radhoine Jmal           2020-10-16      Roche CESR      cffcCheckUser                - Update cffcCheckUser: tokenID = null / Add auto unregister user
 */
 
 /* eslint-disable no-undef*/
@@ -497,6 +497,66 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             // eslint-disable-next-line no-magic-numbers
             return generateReturn(-1001, "invalid input");
         }
+        //----------------------regGetRegisteredUser-----------------
+        var result_regGetRegisteredUser =  imsApiService.regGetRegisteredUser(imsApiSessionContext,
+            stationNumber // String
+        );
+        var return_value = result_regGetRegisteredUser.return_value;
+        if (return_value != 0 && return_value != -104) {
+            return generateReturn(-1002, "Fehler in MES API regGetRegisteredUser");
+        }
+
+        if(return_value == 0 && requestType != 0){
+            var objectrequestType = 7;
+            var objectNumber = stationNumber;
+            var objectDetail = -1;
+            var attributeCodeArray = ["USER_INFO"];
+            var allMergeLevel = 0;
+            var attributeResultKeys = [ImsApiKey.ATTRIBUTE_CODE, ImsApiKey.ATTRIBUTE_VALUE, ImsApiKey.ERROR_CODE];
+            var result_attribGetAttributeValues = imsApiService.attribGetAttributeValues(
+                imsApiSessionContext,
+                stationNumber, // String
+                objectrequestType, // int
+                objectNumber, // String
+                objectDetail, // String
+                attributeCodeArray, // String[]
+                allMergeLevel, // int
+                attributeResultKeys // String[]
+            );
+            var return_value = result_attribGetAttributeValues.return_value;
+            if (return_value != 0) {
+                return generateError(-1002, "Fehler in MES API attribGetAttributeValues");
+            }
+            var userInfo = "" + result_attribGetAttributeValues.attributeResultValues[1];
+
+            var user = userInfo.split("|")[0];
+            var pw = userInfo.split("|")[1];
+            var token = userInfo.split("|")[2];
+            if (token != "null") {
+                user = "";
+                pw = token;
+            }
+            //--------------------regUnregisterUser--------------------
+            var result_regUnregisterUser = imsApiService.regUnregisterUser(
+                imsApiSessionContext,
+                stationNumber, // --> String
+                user, // --> String
+                pw, // --> String
+                "01" // --> String
+            );
+
+            var return_value = result_regUnregisterUser.return_value;
+            if (return_value == -104) {
+                return generateReturn(1, "No user has logged into the station");
+            }
+            if (return_value == -107) {
+                return generateReturn(1, "Another user is already logged into the station");
+            }
+            if (return_value !== 0) {
+                return generateReturn(1, "User/password-combination or token invalid");
+            }
+            updateUserAttribute(stationNumber, "", "", "");
+        }
         if (!tokenID) {
             tokenID = null;
             if (userId && password) {
@@ -686,6 +746,7 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             UserGroup = [];
         }
         return generateReturn(0, "", [userId, UserGroup[0]]);
+        
     } else {
         return generateReturn(0, "", ["userID", "userGroup"]);
     }
