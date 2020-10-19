@@ -745,7 +745,7 @@ function cffcCheckUser(stationNumber, tokenID, userId, password, requestType) {
             userId = userName;
             UserGroup = [];
         }
-        return generateReturn(0, "", [userId, UserGroup[0]]);
+        return generateReturn(0, "", [userId, UserGroup]);
         
     } else {
         return generateReturn(0, "", ["userID", "userGroup"]);
